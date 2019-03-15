@@ -13,7 +13,7 @@ let downloadsInProgress = 0;
 let bytesDownloaded = 0;
 let filesDownloaded = 0;
 let lastLogFilesDownloaded = -1;
-let reDownloadLatest = false;
+let keepUpdating = true;
 
 function createHttpOptions(link) {
 	let hostname;
@@ -44,7 +44,7 @@ function getHttp( link ) {
 			resp.on('data', (chunk) => {
 				data += chunk;
 			});
-			// The whole response has been received. Return the results.
+			// The whole response has been received. Return the result.
 			resp.on('end', () => {
 				downloadsInProgress--;
 				filesDownloaded++;
@@ -89,7 +89,9 @@ var allLinks = []; // array of Links() - indices are servernames like "server12"
 function Links() {
 	this.link = ""; // contains link to the list of data and name links
 	this.dateLinks = []; // contains link to text file that has the data - indices are dates like "2019_02_09"
+	this.dateLinksSize = []; // contains size of files in bytes
 	this.nameLinks = []; // contains link to text file that has the names - indices are dates like "2019_02_09"
+	this.nameLinksSize = []; // contains size of files in bytes
 }
 
 main();
@@ -109,13 +111,16 @@ async function main() {
 		let percentProgress = (filesDownloaded/(filesDownloaded+downloadsInProgress)*100).toFixed(2)+" %";
 		console.log(getTimeStr()+" - "+filesDownloaded+" files downloaded "+bytesReadable(bytesDownloaded)+", "+downloadsInProgress+" missing - status: "+percentProgress);
 		if (downloadsInProgress <= 0) {
-			if (!reDownloadLatest) {
-				console.log("Downloading files ... ");
+			if (keepUpdating) {
 				lastLogFilesDownloaded = -1;
 				filesDownloaded = 0;
 				bytesDownloaded = 0;
-				reDownloadLatest = true;
-				downloadAll();
+				console.log("Updating files ... ");
+				updateAllFiles();
+				if (!keepUpdating) {
+					clearInterval(intervUpdateLog);
+					console.log("Download complete!");
+				}
 				return;
 			}
 			clearInterval(intervUpdateLog);
@@ -123,8 +128,8 @@ async function main() {
 		}
 	}, 5000);
 
-	console.log("Updating files ... ");
-	reDownloadLatestFiles();
+	console.log("Downloading files ... ");
+	downloadAll();
 }
 
 function downloadAll() {
@@ -256,22 +261,63 @@ async function getAllLinks() {
 
 		console.log("Downloading links: "+allLinks[serverName].link);
 		let html_days = await keepDownloading(allLinks[serverName].link);
-		let dayLinkList = html_days.match(/\=\"20.+?[^s]\.txt/g);
-		for (var k in dayLinkList) {
-			let dayLink = String(dayLinkList[k]).substr(2);
-			let date = stringToDate(dayLink);
-			let dateStr = getDateString(date);
-			allLinks[serverName].dateLinks[dateStr] = allLinks[serverName].link + dayLink;
-		}
-		let nameLinkList = html_days.match(/\=\"20.+?_names\.txt/g);
-		for (var k in nameLinkList) {
-			let nameLink = String(nameLinkList[k]).substr(2);
-			let date = stringToDate(nameLink);
-			let dateStr = getDateString(date);
-			allLinks[serverName].nameLinks[dateStr] = allLinks[serverName].link + nameLink;
+		let lines = html_days.split('\n');
+		for (var l in lines) {
+			let line = lines[l];
+			let dayLink = line.match(/\=\"20.+?[^s]\.txt/g);
+			if (dayLink) {
+				dayLink = String(dayLink).substr(2);
+				let date = stringToDate(dayLink);
+				let dateStr = getDateString(date);
+				allLinks[serverName].dateLinks[dateStr] = allLinks[serverName].link + dayLink;
+				allLinks[serverName].dateLinksSize[dateStr] = parseInt(line.match(/[0-9]+$/gm));
+				continue;
+			}
+			let nameLink = line.match(/\=\"20.+?_names\.txt/g);
+			if (nameLink) {
+				nameLink = String(nameLink).substr(2);
+				let date = stringToDate(nameLink);
+				let dateStr = getDateString(date);
+				allLinks[serverName].nameLinks[dateStr] = allLinks[serverName].link + nameLink;
+				allLinks[serverName].nameLinksSize[dateStr] = parseInt(line.match(/[0-9]+$/gm));	
+			}
 		}
 	}
 	console.log(" ");
+}
+
+async function updateAllFiles() {
+	let allFiles = [];
+	fs.readdirSync(rootFolder).forEach( (file) => {
+		allFiles[file] = new Links();
+	});
+	let updateComplete = true;
+	for (var server in allFiles) {
+		let dir = rootFolder + fileSeperator + server;
+		allFiles[server].link = dir;
+		fs.readdirSync(dir).forEach( (file) => {
+			let diff = 0;
+			const filePath = dir+fileSeperator+file;
+			const stats = fs.statSync(filePath);
+			if (file.indexOf("names") > -1) {
+				let d = file.replace("_names", "");
+				diff = allLinks[server].nameLinksSize[d] - stats.size;
+				if (diff > 0) {
+					updateComplete = false;
+					console.log("updating: "+server+" "+d+" -> missing "+bytesReadable(diff));
+					downloadFile(allLinks[server].dateLinks[d], filePath);
+				}
+			} else {
+				diff = allLinks[server].dateLinksSize[file] - stats.size;
+				if (diff > 0) {
+					updateComplete = false;
+					console.log("updating: "+server+" "+file+" -> missing "+bytesReadable(diff));
+					downloadFile(allLinks[server].dateLinks[file], filePath);
+				}
+			}
+		});
+	}
+	if (updateComplete) keepUpdating = false;
 }
 
 function getTimeStr() {
