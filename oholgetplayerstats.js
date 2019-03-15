@@ -243,17 +243,27 @@ function Links() {
 
 main();
 async function main() {
-
-	printFileDesc();
-	let hashFileExists = false;
-	let hashFile = ""; 
-	while (!hashFileExists) {
-		hashFile = await getUserInput('filename: ');
-		if (!fs.existsSync(hashFile)) {
-			console.log("ERROR: can not find file '"+hashFile+"'");
-		} else hashFileExists = true;
+	var args = process.argv.slice(0);
+	console.log("This script uses player hashes to find data about players");
+	console.log("You can start this script like this: "+args[0].match(/[A-Za-z0-9\.]+$/)+" "+args[1].match(/[A-Za-z0-9\.]+$/)+" hash");
+	console.log("Or you can just start it like this:  "+args[0].match(/[A-Za-z0-9\.]+$/)+" "+args[1].match(/[A-Za-z0-9\.]+$/));
+	console.log("Then it will ask you for a file containing hashes. This is useful for checking more than one hash");
+	console.log(" ");
+	if (!args[2] || args[2].length < 0) {
+		printFileDesc();
+		let hashFileExists = false;
+		let hashFile = ""; 
+		while (!hashFileExists) {
+			hashFile = await getUserInput('filename: ');
+			if (!fs.existsSync(hashFile)) {
+				console.log("ERROR: can not find file '"+hashFile+"'");
+			} else hashFileExists = true;
+		}
+		getUserDataFromFile(hashFile);
+	} else {
+		players[args[2]] = new PlayerData();
+		players[args[2]].desc = "";
 	}
-	getUserDataFromFile(hashFile);
 
 	console.log("Input dates in this format 'YEAR_MONTH_DAY', for example '2019_01_23'");
 	let strDateBegin = await getUserInput('date_begin: ');
@@ -306,7 +316,6 @@ async function main() {
 }
 
 function printFileDesc() {
-	console.log("This script uses player hashes to find data about players");
 	console.log("Create a file that looks like this: ");
 	console.log("-----------------------------------------");
 	console.log(" ");
@@ -353,11 +362,13 @@ function getUserDataFromFile(filename) {
 			if (k+1 != splittedLine.length) players[hash].desc += ' ';
 		}
 	}
+	console.log("-----------------------------------------");
 	console.log(" ");
 	for (var key in players) {
 		console.log(key+" "+players[key].desc);
 	}
 	console.log(" ");
+	console.log("-----------------------------------------");
 }
 
 function isValidDate(fileName) {
@@ -659,7 +670,7 @@ function logPlayerData() {
 	for (var hash in players) {
 		processCollectedPlayerData(players[hash]);
 		logResults("==========================================");
-		logResults(players[hash].desc);
+		if (players[hash].desc.length > 0) logResults(players[hash].desc);
 		logResults(hash);
 		logResults("------------------------------------------");
 		if (players[hash].firstEntry === 9999999999999) logResults("firstEntry: unknown");
