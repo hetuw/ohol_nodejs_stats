@@ -1,6 +1,8 @@
 // Copyright (C) 2019 hetuw
 // GNU General Public License version 2 https://www.gnu.org/licenses/gpl-2.0.txt
 
+const millisPerDay = 1000 * 60 * 60 * 24;
+
 let isWin = process.platform === "win32";
 let fileSeperator = '/';
 if (isWin) fileSeperator = '\\';
@@ -100,7 +102,7 @@ const eveSpawningAge = 14;
 
 var date_begin = []; // contains 3 ints, year - month - day
 var date_end = [];
-var date_current = [];
+let processingDate = null; // contains Date() of main data being currently processed
 
 // chosen by user
 var date_real_begin = [];
@@ -147,90 +149,152 @@ function PlayerData() {
 }
 
 function processCollectedPlayerData(player) {
-	let killsAge = 0;
-	let killsFemales = 0;
 	let kidsAge = 0;
-	let kidsDead = 0;
+	let deadKids = 0;
+	let killsAge = 0;
+	let killedFemales = 0;
 	for (var s in player.server) {
-		if (player.server[s].kids) {
-			player.kids += player.server[s].kids.length;
-			for (var i in player.server[s].kidsAge) {
-				kidsAge += player.server[s].kidsAge[i];
-			}
-			kidsDead += player.server[s].kidsDead.length;
-			player.grandKids += player.server[s].grandKids.length;
-		}
-		if (player.server[s].kills) {
-			player.kills += player.server[s].kills.length;
-			for (var i in player.server[s].killsAge) {
-				killsAge += player.server[s].killsAge[i];
-				if (player.server[s].killsGender[i] === 'F') killsFemales++;
-			}
-		}
+		let serverInfo = player.server[s];
+		serverInfo.processAll();
+
+		player.kids += serverInfo.kids;
+		player.grandKids += serverInfo.grandKids;
+		player.kills += serverInfo.kills;
+
+		deadKids += serverInfo.deadKids;
+		kidsAge += serverInfo.kidsAge;
+		killsAge += serverInfo.killsAge;
+		killedFemales += serverInfo.killedFemales;
 	}
+	player.avgKidAge = (kidsAge/deadKids).toFixed(2);
 	player.avgVictimAge = (killsAge/player.kills).toFixed(2);
-	player.victimFemaleProbability = (killsFemales/player.kills*100).toFixed(2);
-	player.avgKidAge = (kidsAge/kidsDead).toFixed(2);
+	player.victimFemaleProbability = (killedFemales/player.kills*100).toFixed(2);
+}
+
+function PlayerServerIdInfo() {
+	this.id = ""; // containing specific server id for a player as a string
+	this.date = null; // first encounter of the id ( birth ), contains Date()
+	this.kids = []; // ids of kids from this player
+	this.kidsDead = []; // ids of kids that died from this player
+	this.kidsAge = 0; // whenever a kid dies add lifespan to kidsAge - needs kidsDead[] to work correctly
+	this.grandKids = []; // ids of grandkids from this player
+	this.kills = []; // ids of killed players from this player
+	this.killsAge = 0;
+	this.killedFemales = 0; // how many females killed
+}
+
+function getDayDiff(dateA, dateB) {
+	return Math.abs(dateA.getTime() - dateB.getTime()) / millisPerDay;
 }
 
 function PlayerServerData() {
-	this.ids = []; // contains ints of the specefic server player ids
+	this.idInfos = []; // array containing PlayerServerIdInfo()
 
-	this.kids = [];
-	this.kidsDead = []; 
-	this.kidsAge = [];
-	this.grandKids = [];
+	this.kids = 0;
+	this.deadKids = 0;
+	this.kidsAge = 0;
+	this.grandKids = 0;
 
-	this.kills = [];
-	this.killsAge = [];
-	this.killsGender = [];
+	this.kills = 0;
+	this.killsAge = 0;
+	this.killedFemales = 0;
 
-	this.addId = function(id) {
-		for (var i in this.ids) {
-			if (this.ids[i] === id) return;
-		}
-		this.ids.push(id);
+	this.processIdInfoData = function(idInfoId) {
+		this.kids += this.idInfos[idInfoId].kids.length;
+		this.deadKids += this.idInfos[idInfoId].kidsDead.length;
+		this.kidsAge += this.idInfos[idInfoId].kidsAge;
+		this.grandKids += this.idInfos[idInfoId].grandKids.length;
+
+		this.kills += this.idInfos[idInfoId].kills.length;
+		this.killsAge += this.idInfos[idInfoId].killsAge;
+		this.killedFemales += this.idInfos[idInfoId].killedFemales;
 	}
-	this.equalsId = function(id) {
-		for (var i in this.ids) {
-			if (this.ids[i] === id) return true;
+	this.processAll = function() {
+		for (var i in this.idInfos) {
+			this.processIdInfoData(i);
+		}
+	}
+	this.removeOldIds = function(currentDate) {
+		let newIdInfo = [];
+		for (var i in this.idInfos) {
+			if (getDayDiff(currentDate, this.idInfos[i].date) < 3) { // forget ids after 2 days
+				newIdInfo.push(this.idInfos[i]);
+			} else {
+				this.processIdInfoData(i);
+			}
+		}
+		this.idInfos = null;
+		this.idInfos = newIdInfo;
+	} 
+
+	this.addId = function(id, date) {
+		for (var i in this.idInfos) {
+			if (this.idInfos[i].id === id) return;
+		}
+		let newIdInfo = new PlayerServerIdInfo();
+		newIdInfo.id = id;
+		newIdInfo.date = new Date(date);
+		this.idInfos.push(newIdInfo);
+	}
+
+	this.getIdInfoId = function(playerServerId) {
+		for (var i in this.idInfos) {
+			if (this.idInfos[i].id === playerServerId) return i;
+		}
+		return -1;
+	}
+	this.isChild = function(idInfosId, kidId) {
+		for (var i in this.idInfos[idInfosId].kids) {
+			if (this.idInfos[idInfosId].kids[i] === kidId) return true;
 		}
 		return false;
 	}
-	this.isChild = function(kidId) {
-		for (var i in this.kids) {
-			if (this.kids[i] === kidId) return true;
-		}
-		return false;
-	}
+
 	this.addKid = function(parentId, kidId) {
-		if (!this.equalsId(parentId)) return;
-		if (this.isChild(kidId)) return;
-		this.kids.push(kidId);
-	}
-	this.addKill = function(killerId, killedId, killedAge, killedGender) {
-		if (!this.equalsId(killerId)) return;
-		for (var i in this.kills) {
-			if (this.kills[i] === killedId) return;
-		}
-		this.kills.push(killedId);
-		this.killsAge.push(killedAge);
-		this.killsGender.push(killedGender);
+		let idInfosId = this.getIdInfoId(parentId);
+		if (idInfosId < 0) return;
+		if (this.isChild(idInfosId, kidId)) return;
+		this.idInfos[idInfosId].kids.push(kidId);
 	}
 	this.addGrandKid = function(parentId, kidId) {
-		if (!this.isChild(parentId)) return;
-		for (var i in this.grandKids) {
-			if (this.grandKids[i] === kidId) return;
+		let idInfosId = -1;
+		for (var i in this.idInfos) {
+			if (this.isChild(i, parentId)) {
+				idInfosId = i;
+				break;
+			}
 		}
-		this.grandKids.push(kidId);
+		if (idInfosId < 0) return;
+		for (var i in this.idInfos[idInfosId].grandKids) {
+			if (this.idInfos[idInfosId].grandKids[i] === kidId) return;
+		}
+		this.idInfos[idInfosId].grandKids.push(kidId);
 	}
 	this.childDied = function(kidId, kidAge) {
-		if (!this.isChild(kidId)) return;
-		for (var i in this.kidsDead) {
-			if (this.kidsDead[i] === kidId) return;
+		let idInfosId = -1;
+		for (var i in this.idInfos) {
+			if (this.isChild(i, kidId)) {
+				idInfosId = i;
+				break;
+			}
 		}
-		this.kidsDead.push(kidId);
-		this.kidsAge.push(kidAge);
+		if (idInfosId < 0) return;
+		for (var i in this.idInfos[idInfosId].kidsDead) {
+			if (this.idInfos[idInfosId].kidsDead[i] === kidId) return;
+		}
+		this.idInfos[idInfosId].kidsDead.push(kidId);
+		this.idInfos[idInfosId].kidsAge += kidAge;
+	}
+
+	this.addKill = function(killerId, killedId, killedAge, killedGender) {
+		let idInfosId = this.getIdInfoId(killerId);
+		if (idInfosId < 0) return;
+		for (var i in this.idInfos[idInfosId].kills) {
+			if (this.idInfos[idInfosId].kills[i] === killedId) return;
+		}
+		this.idInfos[idInfosId].kills.push(killedId);
+		this.idInfos[idInfosId].killsAge += killedAge;
+		if (killedGender === 'F') this.idInfos[idInfosId].killedFemales++;
 	}
 }
 
@@ -247,7 +311,7 @@ async function main() {
 	console.log("This script uses player hashes to find data about players");
 	console.log("You can start this script like this: "+args[0].match(/[A-Za-z0-9\.]+$/)+" "+args[1].match(/[A-Za-z0-9\.]+$/)+" hash");
 	console.log("Or you can just start it like this:  "+args[0].match(/[A-Za-z0-9\.]+$/)+" "+args[1].match(/[A-Za-z0-9\.]+$/));
-	console.log("Then it will ask you for a file containing hashes. This is useful for checking more than one hash");
+	console.log("Then it will ask you for a file containing hashes");
 	console.log(" ");
 	if (!args[2] || args[2].length < 0) {
 		printFileDesc();
@@ -487,6 +551,7 @@ async function getAllFileLinks() {
 async function downloadAndProcessData() {
 	decreaseDate(date_begin);
 	increaseDate(date_end);
+	let date_current = [];
 	for (var i = 0; i < 3; i++) {
 		date_current[i] = date_begin[i];
 	}
@@ -528,6 +593,7 @@ async function processDataFromServer(strServer, strDate) {
 }
 
 function processTDD(strServer) {
+	processingDate = new Date(tdd[strServer].strDates[1].replace(/_/g, '-'));
 	for (var l in tdd[strServer].data[1]) {
 		processMainDataLine(strServer, tdd[strServer].data[1][l]);
 	}
@@ -540,6 +606,10 @@ function processTDD(strServer) {
 		for (var l in tdd[strServer].data[d]) {
 			processTertiaryDataLine(strServer, tdd[strServer].data[d][l]);
 		}
+	}
+	for (var h in players) {
+		if (!players[h].server[strServer]) continue;
+		players[h].server[strServer].removeOldIds(processingDate);
 	}
 }
 
@@ -562,7 +632,7 @@ function processMainDataLine(strServer, line) {
 
 	if (players[hash]) {
 		if (!players[hash].server[strServer]) players[hash].server[strServer] = new PlayerServerData();
-		players[hash].server[strServer].addId(playerId);
+		players[hash].server[strServer].addId(playerId, processingDate);
 		if (data[0] === 'B') {
 			if (players[hash].firstEntry > unixTime) players[hash].firstEntry = unixTime;
 			if (players[hash].lastEntry < unixTime) players[hash].lastEntry = unixTime;
