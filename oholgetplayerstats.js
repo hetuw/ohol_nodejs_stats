@@ -121,6 +121,7 @@ function PlayerData() {
 	this.births = 0;
 	this.deaths = 0;
 	this.minutesAlive = 0;
+	this.minutesAliveIgnored = 0;
 	this.deathReasons = []; 
 
 	this.eves = 0; // how often the player spawned as an eve (with generation 1)
@@ -655,10 +656,12 @@ function processMainDataLine(strServer, line) {
 			let deathReason = String(data[7].match(/[a-zA-Z]+/));
 			players[hash].minutesAlive += age;
 			if (ignoreDeathsUnderAge > age) {
+				players[hash].minutesAliveIgnored += age;
 				players[hash].ignoredUnderAgeDeaths++;
 				return;
 			}
 			if (ignoreDisconnects && deathReason.indexOf('sconnec') > -1) {
+				players[hash].minutesAliveIgnored += age;
 				players[hash].ignoredDisconnects++;
 				return;
 			}
@@ -755,14 +758,15 @@ function logPlayerData() {
 		logResults("females: "+players[hash].females);
 		logResults("males/females: "+(players[hash].males/players[hash].females).toFixed(2));
 		logResults("------------------------------------------");
-		logResults("avg. death age: "+((players[hash].minutesAlive+(players[hash].eves*eveSpawningAge))/players[hash].deaths).toFixed(2));
+		logResults("avg. death age: "+((players[hash].minutesAlive-players[hash].minutesAliveIgnored+(players[hash].eves*eveSpawningAge))/players[hash].deaths).toFixed(2));
 		for (var i in players[hash].deathReasons) {
 			logResults("Death by "+i+": "+players[hash].deathReasons[i]+" -> "+(players[hash].deathReasons[i]/players[hash].deaths*100).toFixed(2)+"%");
 		}
 		logResults("------------------------------------------");
 		if (players[hash].ignoredUnderAgeDeaths > 0) logResults("ignoredUnderAgeDeaths: "+players[hash].ignoredUnderAgeDeaths);
 		if (players[hash].ignoredDisconnects > 0) logResults("ignoredDisconnects: "+players[hash].ignoredDisconnects);
-		logResults("elderDeaths: "+players[hash].elderDeaths);
+		//logResults("elderDeaths: "+players[hash].elderDeaths);
+		logResults("timeAliveIgnored: "+minutesToTimeStr(players[hash].minutesAliveIgnored));
 		logResults("------------------------------------------");
 		logResults("born as eve: "+players[hash].eves+" -> "+(players[hash].eves/players[hash].births*100).toFixed(2)+"%");
 		logResults("avg. generation born into: "+(players[hash].eveChains/players[hash].births).toFixed(2));
