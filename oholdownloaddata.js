@@ -47,7 +47,7 @@ function createHttpOptions(link) {
 	let options = {
 		hostname: hostname,
 		path: path,
-		timeout: 10000,
+		timeout: 60000,
 	};
 	return options;
 }
