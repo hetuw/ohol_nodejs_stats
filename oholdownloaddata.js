@@ -9,7 +9,7 @@ const fs = require('fs');
 
 const http = require('http');
 
-let forceUpdateMode = false;
+let forceUpdateMode = false; // if true will also update files that contain more bytes than they should have
 var args = process.argv.slice(0);
 for (var a in args) {
 	if (args[a].toLowerCase() === '-force') forceUpdateMode = true;
@@ -18,6 +18,7 @@ for (var a in args) {
 	if (args[a].toLowerCase() === 'force') forceUpdateMode = true;
 	if (args[a].toLowerCase() === 'f') forceUpdateMode = true;
 }
+let updatesHappend = 0;
 
 let downloadsInProgress = 0;
 let bytesDownloaded = 0;
@@ -125,9 +126,15 @@ async function main() {
 				lastLogFilesDownloaded = -1;
 				filesDownloaded = 0;
 				bytesDownloaded = 0;
+				if (forceUpdateMode && updatesHappend > 0) {
+					clearInterval(intervUpdateLog);
+					console.log("Download complete!");
+					return;
+				}
 				console.log("Updating files ... ");
 				updateAllFiles();
-				if (!keepUpdating || forceUpdateMode) {
+				updatesHappend++;
+				if (!keepUpdating) {
 					clearInterval(intervUpdateLog);
 					console.log("Download complete!");
 				}
