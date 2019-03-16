@@ -131,8 +131,9 @@ function PlayerData() {
 	this.firstEntry = 9999999999999; // Unix time in seconds since blabla
 	this.lastEntry = 0; // Unix time in seconds since blabla
 
-	this.males = 0; // how often the player was male
-	this.females = 0; // how often the player was female
+	this.males = 0; // how often the player was born as male
+	this.females = 0; // how often the player was born as female
+	this.femaleDeaths = 0; // ignoring underage deaths or disconnects
 
 	this.ignoredUnderAgeDeaths = 0;
 	this.ignoredDisconnects = 0;
@@ -672,6 +673,7 @@ function processMainDataLine(strServer, line) {
 			}
 			if (!players[hash].deathReasons[deathReason]) players[hash].deathReasons[deathReason] = 0;
 			players[hash].deathReasons[deathReason]++;
+			if (data[5] === 'F') players[hash].femaleDeaths++;
 		}
 	}
 }
@@ -774,10 +776,10 @@ function logPlayerData() {
 		logResults("------------------------------------------");
 		logResults("kids: "+players[hash].kids);
 		if (players[hash].kids > 0 && players[hash].females > 0) {
-			logResults("kids per female life: "+(players[hash].kids/players[hash].females).toFixed(2));	
+			logResults("kids per female life: "+(players[hash].kids/players[hash].femaleDeaths).toFixed(2));	
 			logResults("avg. kid lifespan: "+players[hash].avgKidAge);
 			logResults("grandkids: "+players[hash].grandKids);
-			logResults("grandkids per female life: "+(players[hash].grandKids/players[hash].females).toFixed(2));
+			logResults("grandkids per female life: "+(players[hash].grandKids/players[hash].femaleDeaths).toFixed(2));
 		}
 		logResults("------------------------------------------");
 		logResults("kills: "+players[hash].kills+" -> "+(players[hash].kills/players[hash].deaths*100).toFixed(2)+"%");
