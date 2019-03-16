@@ -9,6 +9,16 @@ const fs = require('fs');
 
 const http = require('http');
 
+let forceUpdateMode = false;
+var args = process.argv.slice(0);
+for (var a in args) {
+	if (args[a].toLowerCase() === '-force') forceUpdateMode = true;
+	if (args[a].toLowerCase() === '--force') forceUpdateMode = true;
+	if (args[a].toLowerCase() === '-f') forceUpdateMode = true;
+	if (args[a].toLowerCase() === 'force') forceUpdateMode = true;
+	if (args[a].toLowerCase() === 'f') forceUpdateMode = true;
+}
+
 let downloadsInProgress = 0;
 let bytesDownloaded = 0;
 let filesDownloaded = 0;
@@ -117,7 +127,7 @@ async function main() {
 				bytesDownloaded = 0;
 				console.log("Updating files ... ");
 				updateAllFiles();
-				if (!keepUpdating) {
+				if (!keepUpdating || forceUpdateMode) {
 					clearInterval(intervUpdateLog);
 					console.log("Download complete!");
 				}
@@ -302,16 +312,18 @@ async function updateAllFiles() {
 			if (file.indexOf("names") > -1) {
 				let d = file.replace("_names", "");
 				diff = allLinks[server].nameLinksSize[d] - stats.size;
-				if (diff > 0) {
+				if ((!forceUpdateMode && diff > 0) || (forceUpdateMode && diff !== 0)) {
 					updateComplete = false;
-					console.log("updating: "+server+" "+d+" -> missing "+bytesReadable(diff));
+					if (diff > 0) console.log("updating: "+server+" "+d+" -> missing "+bytesReadable(diff));
+					else console.log("updating: "+server+" "+d+" -> too much "+bytesReadable(diff*-1));
 					downloadFile(allLinks[server].nameLinks[d], filePath);
 				}
 			} else {
 				diff = allLinks[server].dateLinksSize[file] - stats.size;
-				if (diff > 0) {
+				if ((!forceUpdateMode && diff > 0) || (forceUpdateMode && diff !== 0)) {
 					updateComplete = false;
-					console.log("updating: "+server+" "+file+" -> missing "+bytesReadable(diff));
+					if (diff > 0) console.log("updating: "+server+" "+file+" -> missing "+bytesReadable(diff));
+					else console.log("updating: "+server+" "+file+" -> too much "+bytesReadable(diff*-1));
 					downloadFile(allLinks[server].dateLinks[file], filePath);
 				}
 			}
