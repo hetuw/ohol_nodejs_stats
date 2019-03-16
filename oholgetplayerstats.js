@@ -89,12 +89,9 @@ async function getUserInput(question) {
 	});
 }
 
-// ------------------------- MODIFY ----------------------------------
-// -------------------------------------------------------------------
-const ignoreDisconnects = true;
+const ignoreDisconnects = false; // when true it will mess up the kid and kills per life stats
 const ignoreDeathsUnderAge = 3; // disable it by setting it to 0
 const countDeathsAsOldAgeOverAge = 54; // disable it by setting it to 60 or higher
-// -------------------------------------------------------------------
 
 const rootLink = "http://onehouronelife.com/publicLifeLogData/";
 const rootFolder = "oholData";
@@ -657,7 +654,6 @@ function processMainDataLine(strServer, line) {
 			if (eveChain) {
 				if (eveChain === 1) {
 					players[hash].eves++;
-					//players[hash].minutesAlive -= eveSpawningAge;
 				}
 				players[hash].eveChains += eveChain;
 				if (eveChain > players[hash].longestEveChain) {
