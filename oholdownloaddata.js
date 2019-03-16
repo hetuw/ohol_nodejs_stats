@@ -305,7 +305,7 @@ async function updateAllFiles() {
 				if (diff > 0) {
 					updateComplete = false;
 					console.log("updating: "+server+" "+d+" -> missing "+bytesReadable(diff));
-					downloadFile(allLinks[server].dateLinks[d], filePath);
+					downloadFile(allLinks[server].nameLinks[d], filePath);
 				}
 			} else {
 				diff = allLinks[server].dateLinksSize[file] - stats.size;
