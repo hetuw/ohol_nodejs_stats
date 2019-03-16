@@ -10,13 +10,22 @@ const fs = require('fs');
 const http = require('http');
 
 let forceUpdateMode = false; // if true will also update files that contain more bytes than they should have
+let hideDownloadErrors = true; // errors can be harmless but scare people
 var args = process.argv.slice(0);
 for (var a in args) {
 	if (args[a].toLowerCase() === '-force') forceUpdateMode = true;
-	if (args[a].toLowerCase() === '--force') forceUpdateMode = true;
-	if (args[a].toLowerCase() === '-f') forceUpdateMode = true;
-	if (args[a].toLowerCase() === 'force') forceUpdateMode = true;
-	if (args[a].toLowerCase() === 'f') forceUpdateMode = true;
+	else if (args[a].toLowerCase() === '--force') forceUpdateMode = true;
+	else if (args[a].toLowerCase() === '-f') forceUpdateMode = true;
+	else if (args[a].toLowerCase() === 'force') forceUpdateMode = true;
+	else if (args[a].toLowerCase() === 'f') forceUpdateMode = true;
+	if (args[a].toLowerCase() === '-error') hideDownloadErrors = false;
+	else if (args[a].toLowerCase() === '--error') hideDownloadErrors = false;
+	else if (args[a].toLowerCase() === '-errors') hideDownloadErrors = false;
+	else if (args[a].toLowerCase() === '--errors') hideDownloadErrors = false;
+	else if (args[a].toLowerCase() === '-e') hideDownloadErrors = false;
+	else if (args[a].toLowerCase() === 'e') hideDownloadErrors = false;
+	else if (args[a].toLowerCase() === 'error') hideDownloadErrors = false;
+	else if (args[a].toLowerCase() === 'errors') hideDownloadErrors = false;
 }
 let updatesHappend = 0;
 
@@ -232,11 +241,11 @@ function downloadFile(link, file) {
 			if (err) console.log("ERROR: "+err);
 		});
 	}).catch( function (err) {
-		console.log(err);
-		console.log("ERROR while downloading "+link);
+		if (!hideDownloadErrors) console.log(err);
+		if (!hideDownloadErrors) console.log("ERROR while downloading "+link);
 		let waitSeconds = getRandomInt(7) + 7;
-		console.log("Trying again in "+waitSeconds+" seconds ...");
-		console.log(" ");
+		if (!hideDownloadErrors) console.log("Trying again in "+waitSeconds+" seconds ...");
+		if (!hideDownloadErrors) console.log(" ");
 		setTimeout( () => { downloadFile(link, file) }, waitSeconds*1000);
 	});
 }
