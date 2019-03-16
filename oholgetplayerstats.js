@@ -99,6 +99,7 @@ const countDeathsAsOldAgeOverAge = 54; // disable it by setting it to 60 or high
 const rootLink = "http://onehouronelife.com/publicLifeLogData/";
 const rootFolder = "oholData";
 const eveSpawningAge = 14;
+const ignoreEveDeathsUnderAge = eveSpawningAge + 3;
 
 var date_begin = []; // contains 3 ints, year - month - day
 var date_end = [];
@@ -136,6 +137,7 @@ function PlayerData() {
 	this.femaleDeaths = 0; // ignoring underage deaths or disconnects
 
 	this.ignoredUnderAgeDeaths = 0;
+	this.ignoredEveDeaths = 0;
 	this.ignoredDisconnects = 0;
 	this.elderDeaths = 0;
 
@@ -183,6 +185,7 @@ function PlayerServerIdInfo() {
 	this.kills = []; // ids of killed players from this player
 	this.killsAge = 0;
 	this.killedFemales = 0; // how many females killed
+	this.eveChain = 0; // in which generation the id was born into, 1 === eve
 }
 
 function getDayDiff(dateA, dateB) {
@@ -297,6 +300,17 @@ function PlayerServerData() {
 		this.idInfos[idInfosId].kills.push(killedId);
 		this.idInfos[idInfosId].killsAge += killedAge;
 		if (killedGender === 'F') this.idInfos[idInfosId].killedFemales++;
+	}
+
+	this.setEveChain = function(id, eveChain) {
+		let idInfosId = this.getIdInfoId(id);
+		if (idInfosId < 0) return;
+		this.idInfos[idInfosId].eveChain = eveChain;
+	}
+	this.getEveChain = function(id) {
+		let idInfosId = this.getIdInfoId(id);
+		if (idInfosId < 0) return -1;
+		return this.idInfos[idInfosId].eveChain;
 	}
 }
 
@@ -643,12 +657,13 @@ function processMainDataLine(strServer, line) {
 			if (eveChain) {
 				if (eveChain === 1) {
 					players[hash].eves++;
-					players[hash].minutesAlive -= eveSpawningAge;
+					//players[hash].minutesAlive -= eveSpawningAge;
 				}
 				players[hash].eveChains += eveChain;
 				if (eveChain > players[hash].longestEveChain) {
 					players[hash].longestEveChain = eveChain;
 				}
+				players[hash].server[strServer].setEveChain(playerId, eveChain);
 			}
 			if (data[4] === 'F') players[hash].females++;
 			else if (data[4] === 'M') players[hash].males++;
@@ -656,6 +671,10 @@ function processMainDataLine(strServer, line) {
 			let age = parseFloat(data[4].match(/[0-9\.]+/));
 			let deathReason = String(data[7].match(/[a-zA-Z]+/));
 			players[hash].minutesAlive += age;
+			let eveChain = players[hash].server[strServer].getEveChain(playerId);
+			if (eveChain === 1) {
+				players[hash].minutesAlive -= eveSpawningAge;
+			}
 			if (ignoreDeathsUnderAge > age) {
 				players[hash].minutesAliveIgnored += age;
 				players[hash].ignoredUnderAgeDeaths++;
@@ -664,6 +683,11 @@ function processMainDataLine(strServer, line) {
 			if (ignoreDisconnects && deathReason.indexOf('sconnec') > -1) {
 				players[hash].minutesAliveIgnored += age;
 				players[hash].ignoredDisconnects++;
+				return;
+			}
+			if (eveChain === 1 && ignoreEveDeathsUnderAge > age) {
+				players[hash].minutesAliveIgnored += age-eveSpawningAge;
+				players[hash].ignoredEveDeaths++;
 				return;
 			}
 			players[hash].deaths++;
@@ -754,21 +778,26 @@ function logPlayerData() {
 		else logResults("lastEntry: "+getDateStringFromUnixTime(players[hash].lastEntry));
 		logResults("------------------------------------------");
 		logResults("births: "+players[hash].births);
-		logResults("deaths: "+players[hash].deaths);
+		logResults("deaths: "+(players[hash].deaths+players[hash].ignoredUnderAgeDeaths+players[hash].ignoredEveDeaths+players[hash].ignoredDisconnects));
 		logResults("timeAlive: "+minutesToTimeStr(players[hash].minutesAlive));
 		logResults("males: "+players[hash].males);
 		logResults("females: "+players[hash].females);
 		logResults("males/females: "+(players[hash].males/players[hash].females).toFixed(2));
 		logResults("------------------------------------------");
-		logResults("avg. death age: "+((players[hash].minutesAlive-players[hash].minutesAliveIgnored+(players[hash].eves*eveSpawningAge))/players[hash].deaths).toFixed(2));
+		let allowedMinutesLive = players[hash].minutesAlive-players[hash].minutesAliveIgnored;
+		let allowedEveDeaths = players[hash].eves-players[hash].ignoredEveDeaths;
+		//logResults("allowedMinutesLive: "+minutesToTimeStr(allowedMinutesLive));
+		//logResults("allowedEveDeaths: "+allowedEveDeaths);
+		logResults("avg. death age: "+((allowedMinutesLive+(allowedEveDeaths*eveSpawningAge))/players[hash].deaths).toFixed(2));
 		for (var i in players[hash].deathReasons) {
 			logResults("Death by "+i+": "+players[hash].deathReasons[i]+" -> "+(players[hash].deathReasons[i]/players[hash].deaths*100).toFixed(2)+"%");
 		}
 		logResults("------------------------------------------");
 		if (players[hash].ignoredUnderAgeDeaths > 0) logResults("ignoredUnderAgeDeaths: "+players[hash].ignoredUnderAgeDeaths);
+		if (players[hash].ignoredEveDeaths > 0) logResults("ignoredEveDeaths: "+players[hash].ignoredEveDeaths);
 		if (players[hash].ignoredDisconnects > 0) logResults("ignoredDisconnects: "+players[hash].ignoredDisconnects);
-		//logResults("elderDeaths: "+players[hash].elderDeaths);
 		logResults("timeAliveIgnored: "+minutesToTimeStr(players[hash].minutesAliveIgnored));
+		//logResults("elderDeaths: "+players[hash].elderDeaths);
 		logResults("------------------------------------------");
 		logResults("born as eve: "+players[hash].eves+" -> "+(players[hash].eves/players[hash].births*100).toFixed(2)+"%");
 		logResults("avg. generation born into: "+(players[hash].eveChains/players[hash].births).toFixed(2));
