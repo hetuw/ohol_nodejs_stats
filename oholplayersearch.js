@@ -364,10 +364,13 @@ async function downloadAndProcessData() {
 	while (dateEqualsDate(date_current, date_end) <= 0) {
 		let strDate = getDateString(date_current);
 		console.log("Get data for "+strDate+" ... "+getDateString(date_end));
+		let noDataAvailable = true;
 		for (var server in allLinks) {
 			if (!allLinks[server].dateLinks[strDate]) continue;
+			noDataAvailable = false;
 			await processDataFromServer(server, strDate);
 		}
+		if (noDataAvailable) console.log("No data available for: "+strDate);
 		increaseDate(date_current);
 	}
 }

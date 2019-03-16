@@ -9,10 +9,11 @@ const fs = require('fs');
 
 const http = require('http');
 
+let askForDate = false;
 let forceUpdateMode = false; // if true will also update files that contain more bytes than they should have
 let hideDownloadErrors = true; // errors can be harmless but scare people
 var args = process.argv.slice(0);
-for (var a in args) {
+for (var a = 2; a < args.length; a++) {
 	if (args[a].toLowerCase() === '-force') forceUpdateMode = true;
 	else if (args[a].toLowerCase() === '--force') forceUpdateMode = true;
 	else if (args[a].toLowerCase() === '-f') forceUpdateMode = true;
@@ -26,6 +27,11 @@ for (var a in args) {
 	else if (args[a].toLowerCase() === 'e') hideDownloadErrors = false;
 	else if (args[a].toLowerCase() === 'error') hideDownloadErrors = false;
 	else if (args[a].toLowerCase() === 'errors') hideDownloadErrors = false;
+	if (args[a].toLowerCase() === '-date') askForDate = true;
+	else if (args[a].toLowerCase() === '--date') askForDate = true;
+	else if (args[a].toLowerCase() === '-d') askForDate = true;
+	else if (args[a].toLowerCase() === 'date') askForDate = true;
+	else if (args[a].toLowerCase() === 'd') askForDate = true;
 }
 let updatesHappend = 0;
 
@@ -101,8 +107,28 @@ function getHttpSilent( link ) {
 	});
 }
 
+const readline = require('readline');
+
+async function getUserInput(question) {
+	return new Promise( function (resolve, reject) {
+// -------------------------------------------------------------------
+		const rl = readline.createInterface({
+			input: process.stdin,
+			output: process.stdout
+		});
+		rl.question(question, (answer) => {
+	  		rl.close();
+			resolve(answer);
+		});
+// -------------------------------------------------------------------
+	});
+}
+
 const rootLink = "http://onehouronelife.com/publicLifeLogData/";
 const rootFolder = "oholData";
+
+var date_begin = []; // contains 3 ints, year - month - day
+var date_end = [];
 
 var allLinks = []; // array of Links() - indices are servernames like "server12" or "bigserver2"
 
@@ -116,6 +142,18 @@ function Links() {
 
 main();
 async function main() {
+	if (askForDate) {
+		console.log("Input dates in this format 'YEAR_MONTH_DAY', for example '2019_01_23'");
+		let strDateBegin = await getUserInput('date_begin: ');
+		let strDateEnd = await getUserInput('date_end: ');
+		date_begin = stringToDate(strDateBegin);
+		date_end = stringToDate(strDateEnd);
+		console.log(" ");
+		if (dateEqualsDate(date_begin, date_end) > 0) {
+			console.log("Error date_begin is bigger than date_end "+getDateString(date_begin)+" > "+getDateString(date_end));
+		return;
+	}
+	}
 	console.log("Downloading all data and saving it to '"+rootFolder+"'");
 	console.log("This may take a while... ");
 	console.log(" ");
@@ -294,6 +332,7 @@ async function getAllLinks() {
 			if (dayLink) {
 				dayLink = String(dayLink).substr(2);
 				let date = stringToDate(dayLink);
+				if (askForDate && !isValidDate(date)) continue;
 				let dateStr = getDateString(date);
 				allLinks[serverName].dateLinks[dateStr] = allLinks[serverName].link + dayLink;
 				allLinks[serverName].dateLinksSize[dateStr] = parseInt(line.match(/[0-9]+$/gm));
@@ -303,6 +342,7 @@ async function getAllLinks() {
 			if (nameLink) {
 				nameLink = String(nameLink).substr(2);
 				let date = stringToDate(nameLink);
+				if (askForDate && !isValidDate(date)) continue;
 				let dateStr = getDateString(date);
 				allLinks[serverName].nameLinks[dateStr] = allLinks[serverName].link + nameLink;
 				allLinks[serverName].nameLinksSize[dateStr] = parseInt(line.match(/[0-9]+$/gm));	
@@ -327,6 +367,7 @@ async function updateAllFiles() {
 			const stats = fs.statSync(filePath);
 			if (file.indexOf("names") > -1) {
 				let d = file.replace("_names", "");
+				if (!allLinks[server].nameLinksSize[d]) return;
 				diff = allLinks[server].nameLinksSize[d] - stats.size;
 				if ((!forceUpdateMode && diff > 0) || (forceUpdateMode && diff !== 0)) {
 					updateComplete = false;
@@ -335,6 +376,7 @@ async function updateAllFiles() {
 					downloadFile(allLinks[server].nameLinks[d], filePath);
 				}
 			} else {
+				if (!allLinks[server].dateLinksSize[file]) return;
 				diff = allLinks[server].dateLinksSize[file] - stats.size;
 				if ((!forceUpdateMode && diff > 0) || (forceUpdateMode && diff !== 0)) {
 					updateComplete = false;
@@ -357,6 +399,12 @@ function getTimeStr() {
     var sec  = date.getSeconds();
     sec = (sec < 10 ? "0" : "") + sec;
 	return hour+":"+minute+":"+sec;
+}
+
+function isValidDate(date) {
+	if (dateEqualsDate(date, date_begin) < 0) return false;
+	if (dateEqualsDate(date, date_end) > 0) return false;
+	return true;
 }
 
 // returns 0 if they are equal, 1 if dateA is bigger, -1 if dateA is smaller
