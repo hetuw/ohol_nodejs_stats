@@ -6,7 +6,8 @@ The data is described here: https://onehouronelife.com/forums/viewtopic.php?id=2
 
 You will need nodejs to execute the scripts
 
-You can find examples and a tutorial here: https://onehouronelife.com/forums/viewtopic.php?pid=49707#p49707
+Step by Step <b>TUTORIAL</b>: https://onehouronelife.com/forums/viewtopic.php?pid=50164#p50164<br>
+Output examples: https://onehouronelife.com/forums/viewtopic.php?pid=49707#p49707
 
 ### oholdownloaddata.js
 This script downloads/updates all the ohol data and saves it to a folder.
