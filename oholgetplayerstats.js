@@ -35,7 +35,7 @@ avg. kid lifespan: the average death age of your kids
 grandkids: how many kids your kids had
 grandkids per female life: how many grandkids you had per female death (doesnt count female deaths were you lived less than 3 min)
 ------------------------------------------
-kills: how many people you killed -> peopleKilled divided by deaths (only counts lifes where you lived at least 3 min)
+kills: how many people you killed -> peopleKilled divided by deaths (only counts lives where you lived at least 3 min)
 avg. victim age: average age of the people you killed
 victim female probability: what percentage of kills were female
 ==========================================
