@@ -1,6 +1,47 @@
 // Copyright (C) 2019 hetuw
 // GNU General Public License version 2 https://www.gnu.org/licenses/gpl-2.0.txt
 
+/*
+
+FORMAT:
+
+==========================================
+births: All births
+deaths: All deaths (births and deaths might be different because of incomplete data)
+timeAlive: All the time you were alive
+males: All male births
+females: All female births
+males/females: male births divided by female births
+------------------------------------------
+The next section doesnt count deaths for players that played less than 3 min in that life
+avg. death age: Average life span
+Death by hunger: How often you starved -> deathByHunger divided by deaths
+Death by oldAge: Deaths after the age of 54 -> oldAge divided by deaths 
+Death by killer: How often you got killed -> deathByKiller divided by deaths
+Death by disconnect: How often you died because of a disconnect -> deathByDisconnect divided by deaths
+------------------------------------------
+ignoredUnderAgeDeaths: how many deaths under the age of 3 occurred
+ignoredDisconnects: how many disconnects were ignored
+timeAliveIgnored: all the time that you were alive but got ignored in some stats because you dident live long enough
+ignoredEveDeaths: how many eve deaths were ignored because you dident live long enough
+------------------------------------------
+born as eve: how often you were born as eve -> bornAsEve divided by births
+avg. generation born into: average generation you were born into
+longest generation born into
+------------------------------------------
+kids: how many kids you had, counting all kids also suicide babies
+kids per female life: how many kids you had per female death (doesnt count female deaths were you lived less than 3 min)
+avg. kid lifespan: the average death age of your kids
+grandkids: how many kids your kids had
+grandkids per female life: how many grandkids you had per female death (doesnt count female deaths were you lived less than 3 min)
+------------------------------------------
+kills: how many people you killed -> peopleKilled divided by deaths (only counts lifes where you lived at least 3 min)
+avg. victim age: average age of the people you killed
+victim female probability: what percentage of kills were female
+==========================================
+
+*/
+
 const millisPerDay = 1000 * 60 * 60 * 24;
 
 let isWin = process.platform === "win32";
@@ -369,7 +410,7 @@ async function main() {
 			resultFile = await getUserInput('filename: ');
 			try {
 				fileIsGood = true;
-				fs.writeFileSync(resultFile, "test");
+				fs.writeFileSync(resultFile, "processing data... ");
 			} catch (err) {
 				console.log("ERROR: "+err);
 				fileIsGood = false;
@@ -708,20 +749,18 @@ function processSecondaryDataLine(strServer, line) {
 		return;
 	}
 
-	if (players[data[3]]) return;
-
 	let playerId = data[2];
 	for (var p in players) {
 		if (!players[p].server[strServer]) continue;
 		if (data[0] === 'B') {
 			let parentInfo = data[6].split('=');
 			if (parentInfo.length < 2) continue;
-			if (players[p].server[strServer].addKid(parentInfo[1], playerId));
+			players[p].server[strServer].addKid(parentInfo[1], playerId);
 		} else if (data[0] === 'D') {
 			let deathReason = data[7].split('_');
 			if (deathReason.length < 2 || deathReason[0].toUpperCase() !== 'KILLER') continue;
 			let age = parseFloat(data[4].match(/[0-9\.]+/));
-			if (players[p].server[strServer].addKill(deathReason[1], playerId, age, data[5]));
+			players[p].server[strServer].addKill(deathReason[1], playerId, age, data[5]);
 		}
 	}
 }

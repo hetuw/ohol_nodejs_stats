@@ -151,8 +151,8 @@ async function main() {
 		console.log(" ");
 		if (dateEqualsDate(date_begin, date_end) > 0) {
 			console.log("Error date_begin is bigger than date_end "+getDateString(date_begin)+" > "+getDateString(date_end));
-		return;
-	}
+			return;
+		}
 	}
 	console.log("Downloading all data and saving it to '"+rootFolder+"'");
 	console.log("This may take a while... ");
