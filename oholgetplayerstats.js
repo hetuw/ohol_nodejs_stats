@@ -38,10 +38,10 @@ born as eve: how often you were born as eve -> bornAsEve divided by births
 avg. generation born into: average generation you were born into
 longest generation born into
 ------------------------------------------
-kids: how many kids you had, counting all kids also suicide babies
+kids: how many kids you had, counting all kids also suicide babies (doesnt count babies you got in an ignored life)
 kids per female life: how many kids you had per female death (doesnt count female deaths were you lived less than 3 min)
 avg. kid lifespan: the average death age of your kids
-grandkids: how many kids your kids had
+grandkids: how many kids your kids had (doesnt count babies you got in an ignored life)
 grandkids per female life: how many grandkids you had per female death (doesnt count female deaths were you lived less than 3 min)
 ------------------------------------------
 kills: how many people you killed -> peopleKilled divided by deaths (only counts lives where you lived at least 3 min)
