@@ -615,6 +615,10 @@ async function getAllLinks() {
 			allLinks[serverName].dateLinks[dateStr] = allLinks[serverName].link + dayLink;
 		}
 	}
+	if (allLinks.length < 1) {
+		console.log("ERROR: Could not find any links");
+		process.exit();
+	}
 	console.log(" ");
 }
 

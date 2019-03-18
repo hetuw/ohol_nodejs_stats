@@ -371,6 +371,10 @@ async function getAllLinks() {
 			}
 		}
 	}
+	if (allLinks.length < 1) {
+		console.log("ERROR: Could not find any links");
+		process.exit();
+	}
 	console.log(" ");
 }
 
