@@ -23,3 +23,6 @@ This script uses salted email hashes to find out stats about players.
 
 ### ohollineagefromemail.js
 This script can be used to get the lineage link from an email
+
+### colorizestats.js
+Lets you colorize stats from oholgetplayerstats.js, so you can post colored stats on the forums
