@@ -149,15 +149,7 @@ async function getPlayerInfo() {
 	console.log("Start searching for players... ");
 	console.log(" ");
 
-	console.log("Input dates in this format 'YEAR_MONTH_DAY', for example '2019_01_23'");
-	let strDateBegin = await getUserInput("start searching from date: ");
-	let strDateEnd = await getUserInput("search until date: ");
-	date_begin = stringToDate(strDateBegin);
-	date_end = stringToDate(strDateEnd);
-	if (dateEqualsDate(date_begin, date_end) > 0) {
-		//console.log("Error date_begin is bigger than date_end "+getDateString(date_begin)+" > "+getDateString(date_end));
-		throw "Error date_begin is bigger than date_end "+getDateString(date_begin)+" > "+getDateString(date_end);
-	}
+	await getBeginEndDates();
 
 	console.log(" ");
 	let strOutputToFile = await getUserInput('Do you want to save the results to a file? (y/n): ');
@@ -214,6 +206,38 @@ async function getPlayerInfo() {
 
 	console.log(" ");
 	logPInfo();
+}
+
+
+async function getBeginEndDates() {
+	console.log("Input dates in this format 'YEAR_MONTH_DAY', for example '2019_01_23'");
+	let datesAreGood = false;
+	while (!datesAreGood) {
+		date_begin = await getDateFromUser('date_begin: ');
+		date_end = await getDateFromUser('date_end: ');
+
+		if (dateEqualsDate(date_begin, date_end) > 0) {
+			console.log("ERROR: date_begin is bigger than date_end "+getDateString(date_begin)+" > "+getDateString(date_end)+"\n");
+		} else datesAreGood = true;
+	}
+	console.log(" ");
+}
+
+async function getDateFromUser(question) {
+	let dateIsGood = false;
+	let date;
+	while (!dateIsGood) {
+		let dateStr = await getUserInput(question);
+		try {
+			date = stringToDate(dateStr);
+			let d = new Date(date[0]+'-'+date[1]+'-'+date[2]);
+			if (isNaN(d.getTime())) console.log("ERROR: Invalid date: "+dateStr+"\n");
+			else dateIsGood = true;
+		} catch (err) {
+			console.log("ERROR: Invalid date: "+dateStr+"\n");
+		}
+	}
+	return date;
 }
 
 function logPInfo() {

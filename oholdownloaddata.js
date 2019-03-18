@@ -143,16 +143,7 @@ function Links() {
 main();
 async function main() {
 	if (askForDate) {
-		console.log("Input dates in this format 'YEAR_MONTH_DAY', for example '2019_01_23'");
-		let strDateBegin = await getUserInput('date_begin: ');
-		let strDateEnd = await getUserInput('date_end: ');
-		date_begin = stringToDate(strDateBegin);
-		date_end = stringToDate(strDateEnd);
-		console.log(" ");
-		if (dateEqualsDate(date_begin, date_end) > 0) {
-			console.log("Error date_begin is bigger than date_end "+getDateString(date_begin)+" > "+getDateString(date_end));
-			return;
-		}
+		await getBeginEndDates();
 	}
 	console.log("Downloading all data and saving it to '"+rootFolder+"'");
 	console.log("This may take a while... ");
@@ -194,6 +185,37 @@ async function main() {
 
 	console.log("Downloading files ... ");
 	downloadAll();
+}
+
+async function getBeginEndDates() {
+	console.log("Input dates in this format 'YEAR_MONTH_DAY', for example '2019_01_23'");
+	let datesAreGood = false;
+	while (!datesAreGood) {
+		date_begin = await getDateFromUser('date_begin: ');
+		date_end = await getDateFromUser('date_end: ');
+
+		if (dateEqualsDate(date_begin, date_end) > 0) {
+			console.log("ERROR: date_begin is bigger than date_end "+getDateString(date_begin)+" > "+getDateString(date_end)+"\n");
+		} else datesAreGood = true;
+	}
+	console.log(" ");
+}
+
+async function getDateFromUser(question) {
+	let dateIsGood = false;
+	let date;
+	while (!dateIsGood) {
+		let dateStr = await getUserInput(question);
+		try {
+			date = stringToDate(dateStr);
+			let d = new Date(date[0]+'-'+date[1]+'-'+date[2]);
+			if (isNaN(d.getTime())) console.log("ERROR: Invalid date: "+dateStr+"\n");
+			else dateIsGood = true;
+		} catch (err) {
+			console.log("ERROR: Invalid date: "+dateStr+"\n");
+		}
+	}
+	return date;
 }
 
 function downloadAll() {
