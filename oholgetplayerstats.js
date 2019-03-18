@@ -29,9 +29,10 @@ Death by oldAge: Deaths after the age of 54 -> oldAge divided by deaths
 Death by killer: How often you got killed -> deathByKiller divided by deaths
 Death by disconnect: How often you died because of a disconnect -> deathByDisconnect divided by deaths
 ------------------------------------------
+ignoredDeaths: all ignored deaths -> what percentage of all deaths are ignored
+timeAliveIgnored: all the time that you were alive but got ignored in some stats because you dident live long enough
 ignoredUnderAgeDeaths: how many deaths under the age of 3 occurred
 ignoredDisconnects: how many disconnects were ignored
-timeAliveIgnored: all the time that you were alive but got ignored in some stats because you dident live long enough
 ignoredEveDeaths: how many eve deaths were ignored because you dident live long enough
 ------------------------------------------
 born as eve: how often you were born as eve -> bornAsEve divided by births
