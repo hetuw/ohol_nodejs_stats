@@ -1,6 +1,15 @@
 // Copyright (C) 2019 hetuw
 // GNU General Public License version 2 https://www.gnu.org/licenses/gpl-2.0.txt
 
+const ignoreDisconnects = false; // set this to true to ignore disconnects
+const ignoreDeathsUnderAge = 3; // disable it by setting it to 0
+const countDeathsAsOldAgeOverAge = 54; // disable it by setting it to 60 or higher
+
+const rootLink = "http://onehouronelife.com/publicLifeLogData/";
+const rootFolder = "oholData";
+const eveSpawningAge = 14;
+const ignoreEveDeathsUnderAge = eveSpawningAge + 3;
+
 /*
 
 FORMAT:
@@ -130,15 +139,6 @@ async function getUserInput(question) {
 	});
 }
 
-const ignoreDisconnects = false; // when true it will mess up the kid and kills per life stats
-const ignoreDeathsUnderAge = 3; // disable it by setting it to 0
-const countDeathsAsOldAgeOverAge = 54; // disable it by setting it to 60 or higher
-
-const rootLink = "http://onehouronelife.com/publicLifeLogData/";
-const rootFolder = "oholData";
-const eveSpawningAge = 14;
-const ignoreEveDeathsUnderAge = eveSpawningAge + 3;
-
 var date_begin = []; // contains 3 ints, year - month - day
 var date_end = [];
 let processingDate = null; // contains Date() of main data being currently processed
@@ -224,6 +224,7 @@ function PlayerServerIdInfo() {
 	this.killsAge = 0;
 	this.killedFemales = 0; // how many females killed
 	this.eveChain = 0; // in which generation the id was born into, 1 === eve
+	this.ignore = false; // if this player id should be ignored, because he died to early or disconnected
 }
 
 function getDayDiff(dateA, dateB) {
@@ -243,6 +244,8 @@ function PlayerServerData() {
 	this.killedFemales = 0;
 
 	this.processIdInfoData = function(idInfoId) {
+		if (this.idInfos[idInfoId].ignore) return;
+
 		this.kids += this.idInfos[idInfoId].kids.length;
 		this.deadKids += this.idInfos[idInfoId].kidsDead.length;
 		this.kidsAge += this.idInfos[idInfoId].kidsAge;
@@ -349,6 +352,12 @@ function PlayerServerData() {
 		let idInfosId = this.getIdInfoId(id);
 		if (idInfosId < 0) return -1;
 		return this.idInfos[idInfosId].eveChain;
+	}
+
+	this.ignore = function(id) {
+		let idInfosId = this.getIdInfoId(id);
+		if (idInfosId < 0) return -1;
+		this.idInfos[idInfosId].ignore = true;
 	}
 }
 
@@ -718,16 +727,19 @@ function processMainDataLine(strServer, line) {
 			if (ignoreDeathsUnderAge > age) {
 				players[hash].minutesAliveIgnored += age;
 				players[hash].ignoredUnderAgeDeaths++;
+				players[hash].server[strServer].ignore(playerId);
 				return;
 			}
 			if (ignoreDisconnects && deathReason.indexOf('sconnec') > -1) {
 				players[hash].minutesAliveIgnored += age;
 				players[hash].ignoredDisconnects++;
+				players[hash].server[strServer].ignore(playerId);
 				return;
 			}
 			if (eveChain === 1 && ignoreEveDeathsUnderAge > age) {
 				players[hash].minutesAliveIgnored += age-eveSpawningAge;
 				players[hash].ignoredEveDeaths++;
+				players[hash].server[strServer].ignore(playerId);
 				return;
 			}
 			players[hash].deaths++;
