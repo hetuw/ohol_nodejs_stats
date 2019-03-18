@@ -853,7 +853,9 @@ function logPlayerData() {
 		else logResults("lastEntry: "+getDateStringFromUnixTime(players[hash].lastEntry));
 		logResults("------------------------------------------");
 		logResults("births: "+players[hash].births);
-		logResults("deaths: "+(players[hash].deaths+players[hash].ignoredUnderAgeDeaths+players[hash].ignoredEveDeaths+players[hash].ignoredDisconnects));
+		let ignoredDeaths = players[hash].ignoredUnderAgeDeaths+players[hash].ignoredEveDeaths+players[hash].ignoredDisconnects;
+		let allDeaths = players[hash].deaths+ignoredDeaths;
+		logResults("deaths: "+allDeaths);
 		logResults("timeAlive: "+minutesToTimeStr(players[hash].minutesAlive));
 		logResults("males: "+players[hash].males);
 		logResults("females: "+players[hash].females);
@@ -868,10 +870,11 @@ function logPlayerData() {
 			logResults("Death by "+i+": "+players[hash].deathReasons[i]+" -> "+(players[hash].deathReasons[i]/players[hash].deaths*100).toFixed(2)+"%");
 		}
 		logResults("------------------------------------------");
+		if (ignoredDeaths > 0) logResults("ignoredDeaths: "+ignoredDeaths+" -> "+(ignoredDeaths/allDeaths*100).toFixed(2)+"%");
+		logResults("timeAliveIgnored: "+minutesToTimeStr(players[hash].minutesAliveIgnored));
 		if (players[hash].ignoredUnderAgeDeaths > 0) logResults("ignoredUnderAgeDeaths: "+players[hash].ignoredUnderAgeDeaths);
 		if (players[hash].ignoredEveDeaths > 0) logResults("ignoredEveDeaths: "+players[hash].ignoredEveDeaths);
 		if (players[hash].ignoredDisconnects > 0) logResults("ignoredDisconnects: "+players[hash].ignoredDisconnects);
-		logResults("timeAliveIgnored: "+minutesToTimeStr(players[hash].minutesAliveIgnored));
 		//logResults("elderDeaths: "+players[hash].elderDeaths);
 		logResults("------------------------------------------");
 		logResults("born as eve: "+players[hash].eves+" -> "+(players[hash].eves/players[hash].births*100).toFixed(2)+"%");
