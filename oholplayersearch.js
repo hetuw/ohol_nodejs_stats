@@ -95,7 +95,7 @@ async function getUserInput(question) {
 }
 
 
-const rootLink = "http://onehouronelife.com/publicLifeLogData/";
+const rootLink = "http://publicdata.onehouronelife.com/publicLifeLogData/";
 const rootFolder = "oholData";
 let localDataAvailable = false;
 
@@ -342,7 +342,9 @@ async function getAllLinks() {
 			allLinks[serverName].nameLinks[dateStr] = allLinks[serverName].link + nameLink;
 		}
 	}
-	if (allLinks.length < 1) {
+	let linkCount = 0;
+	for (var key in allLinks) linkCount++;
+	if (linkCount < 1) {
 		console.log("ERROR: Could not find any links");
 		process.exit();
 	}

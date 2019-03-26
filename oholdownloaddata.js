@@ -124,7 +124,7 @@ async function getUserInput(question) {
 	});
 }
 
-const rootLink = "http://onehouronelife.com/publicLifeLogData/";
+const rootLink = "http://publicdata.onehouronelife.com/publicLifeLogData/";
 const rootFolder = "oholData";
 
 var date_begin = []; // contains 3 ints, year - month - day
@@ -371,7 +371,9 @@ async function getAllLinks() {
 			}
 		}
 	}
-	if (allLinks.length < 1) {
+	let linkCount = 0;
+	for (var key in allLinks) linkCount++;
+	if (linkCount < 1) {
 		console.log("ERROR: Could not find any links");
 		process.exit();
 	}

@@ -5,7 +5,7 @@ const ignoreDisconnects = false; // set this to true to ignore disconnects
 const ignoreDeathsUnderAge = 3; // disable it by setting it to 0
 const countDeathsAsOldAgeOverAge = 54; // disable it by setting it to 60 or higher
 
-const rootLink = "http://onehouronelife.com/publicLifeLogData/";
+const rootLink = "http://publicdata.onehouronelife.com/publicLifeLogData/";
 const rootFolder = "oholData";
 const eveSpawningAge = 14;
 const ignoreEveDeathsUnderAge = eveSpawningAge + 3;
@@ -616,7 +616,9 @@ async function getAllLinks() {
 			allLinks[serverName].dateLinks[dateStr] = allLinks[serverName].link + dayLink;
 		}
 	}
-	if (allLinks.length < 1) {
+	let linkCount = 0;
+	for (var key in allLinks) linkCount++;
+	if (linkCount < 1) {
 		console.log("ERROR: Could not find any links");
 		process.exit();
 	}
