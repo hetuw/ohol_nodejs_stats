@@ -134,10 +134,13 @@ var allLinks = []; // array of Links() - indices are servernames like "server12"
 
 function Links() {
 	this.link = ""; // contains link to the list of data and name links
+	this.curseLink = ""; // contains link to the list of curse links
 	this.dateLinks = []; // contains link to text file that has the data - indices are dates like "2019_02_09"
 	this.dateLinksSize = []; // contains size of files in bytes
 	this.nameLinks = []; // contains link to text file that has the names - indices are dates like "2019_02_09"
 	this.nameLinksSize = []; // contains size of files in bytes
+	this.curseLinks = []; // contains link to text file that has the curses - indices are dates like "2019_02_09"
+	this.curseLinksSize = []; // contains size of files in bytes
 }
 
 main();
@@ -243,51 +246,11 @@ function downloadServerData(server, serverFolder) {
 			if (!exists) downloadFile(allLinks[server].nameLinks[d], file);
 		});
 	}
-}
-
-function reDownloadLatestFiles() {
-	let fileStruct = [];
-	fs.readdirSync(rootFolder).forEach( (file) => {
-		fileStruct[file] = new Links();
-	});
-	for (var server in fileStruct) {
-		let dir = rootFolder + fileSeperator + server;
-		fileStruct[server].link = dir;
-		fs.readdirSync(dir).forEach( (file) => {
-			if (file.indexOf("names") > -1) {
-				fileStruct[server].nameLinks[file] = dir + fileSeperator + file;
-				return;
-			}
-			fileStruct[server].dateLinks[file] = dir + fileSeperator + file;
+	for (let d in allLinks[server].curseLinks) {
+		let file = serverFolder+fileSeperator+d+"_curses";
+		fs.exists(file, (exists) => {
+			if (!exists) downloadFile(allLinks[server].curseLinks[d], file);
 		});
-	}
-
-	for (let server in fileStruct) {
-		let latestDate = [ 0, 0, 0 ];
-		for (let d in fileStruct[server].dateLinks) {
-			let date = stringToDate(d);
-			if (dateEqualsDate(date, latestDate) > 0) {
-				for (var i in latestDate) {
-					latestDate[i] = date[i];
-				}
-			}
-		}
-		let strDate = getDateString(latestDate);
-		let file = rootFolder + fileSeperator + server + fileSeperator + strDate;
-		downloadFile(allLinks[server].dateLinks[strDate], file);
-
-		latestDate = [ 0, 0, 0 ];
-		for (let d in fileStruct[server].nameLinks) {
-			let date = stringToDate(d);
-			if (dateEqualsDate(date, latestDate) > 0) {
-				for (var i in latestDate) {
-					latestDate[i] = date[i];
-				}
-			}
-		}
-		strDate = getDateString(latestDate);
-		file = rootFolder + fileSeperator + server + fileSeperator + strDate + "_names";
-		downloadFile(allLinks[server].nameLinks[strDate], file);
 	}
 }
 
@@ -338,6 +301,7 @@ async function getAllLinks() {
 	console.log("Downloading links: "+rootLink+"\n");
 	let html_serverLinks = await keepDownloading(rootLink);
 	let serverLinkList = html_serverLinks.match(/\=\"lifeLog_.+?\.com\//g);
+	let curseLinkList = html_serverLinks.match(/\=\"curseLog_.+?\.com\//g);
 	for (var i in serverLinkList) {
 		let cLinkToList = String(serverLinkList[i]).substr(2);
 		let serverName = String(String(cLinkToList.match(/_.+?\./)).match(/[A-Za-z0-9]+/));
@@ -368,6 +332,34 @@ async function getAllLinks() {
 				let dateStr = getDateString(date);
 				allLinks[serverName].nameLinks[dateStr] = allLinks[serverName].link + nameLink;
 				allLinks[serverName].nameLinksSize[dateStr] = parseInt(line.match(/[0-9]+$/gm));	
+			}
+		}
+	} 
+	for (var i in curseLinkList) {
+		let cLinkToList = String(curseLinkList[i]).substr(2);
+		let serverName = String(String(cLinkToList.match(/_.+?\./)).match(/[A-Za-z0-9]+/));
+		serverName = serverName.toLowerCase();
+		if (!allLinks[serverName]) {
+			console.log("Warning: Found curse log for server: "+serverName);
+			console.log("Warning: But did not find any other data about this server");
+			continue;
+		}
+		allLinks[serverName].curseLink = rootLink + cLinkToList;
+
+		console.log("Downloading curse links: "+allLinks[serverName].curseLink);
+		let html_days = await keepDownloading(allLinks[serverName].curseLink);
+		let lines = html_days.split('\n');
+		for (var l in lines) {
+			let line = lines[l];
+			let dayLink = line.match(/\=\"20.+?[^s]\.txt/g);
+			if (dayLink) {
+				dayLink = String(dayLink).substr(2);
+				let date = stringToDate(dayLink);
+				if (askForDate && !isValidDate(date)) continue;
+				let dateStr = getDateString(date);
+				allLinks[serverName].curseLinks[dateStr] = allLinks[serverName].curseLink + dayLink;
+				allLinks[serverName].curseLinksSize[dateStr] = parseInt(line.match(/[0-9]+$/gm));
+				continue;
 			}
 		}
 	}
@@ -402,6 +394,15 @@ async function updateAllFiles() {
 					if (diff > 0) console.log("updating: "+server+" "+d+" -> missing "+bytesReadable(diff));
 					else console.log("updating: "+server+" "+d+" -> too much "+bytesReadable(diff*-1));
 					downloadFile(allLinks[server].nameLinks[d], filePath);
+				}
+			} else if (file.indexOf("curse") > -1) {
+				if (!allLinks[server].curseLinksSize[file]) return;
+				diff = allLinks[server].curseLinksSize[file] - stats.size;
+				if ((!forceUpdateMode && diff > 0) || (forceUpdateMode && diff !== 0)) {
+					updateComplete = false;
+					if (diff > 0) console.log("updating: "+server+" "+file+" -> missing "+bytesReadable(diff));
+					else console.log("updating: "+server+" "+file+" -> too much "+bytesReadable(diff*-1));
+					downloadFile(allLinks[server].curseLinks[file], filePath);
 				}
 			} else {
 				if (!allLinks[server].dateLinksSize[file]) return;
