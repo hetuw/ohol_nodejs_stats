@@ -35,7 +35,6 @@ for (var a = 2; a < args.length; a++) {
 }
 let updatesHappend = 0;
 
-let downloadsInProgress = 0;
 let bytesDownloaded = 0;
 let filesDownloaded = 0;
 let lastLogFilesDownloaded = -1;
@@ -53,7 +52,7 @@ function createHttpOptions(link) {
 	let options = {
 		hostname: hostname,
 		path: path,
-		timeout: 60000,
+		timeout: 30000,
 	};
 	return options;
 }
@@ -64,7 +63,6 @@ function getHttp( link ) {
 		let options = createHttpOptions(link);
 		var data = '';
 		
-		downloadsInProgress++;
 		http.get(options, (resp) => {
 			// A chunk of data has been recieved.
 			resp.on('data', (chunk) => {
@@ -72,13 +70,11 @@ function getHttp( link ) {
 			});
 			// The whole response has been received. Return the result.
 			resp.on('end', () => {
-				downloadsInProgress--;
 				filesDownloaded++;
 				bytesDownloaded += data.length;
 				resolve(data);
 			});
 		}).on("error", (err) => {
-			downloadsInProgress--;
 			reject(err.message);
 		});
 // -------------------------------------------------------------------
@@ -124,6 +120,83 @@ async function getUserInput(question) {
 	});
 }
 
+// -------------------------------------------------------------------
+
+const maxDownloadsAtATime = 100;
+let downloadsInProgress = 0;
+let intervDownloadQueue = null;
+
+function DownloadInfo() {
+	this.link = null;
+	this.file = null;
+}
+
+var downloadQueue = [];
+
+function getRandomInt(max) {
+  return Math.floor(Math.random() * Math.floor(max));
+}
+
+async function sleep(millis) {
+	return new Promise( resolve => {
+		setTimeout(resolve, millis);
+	});
+}
+
+function loopDownloadQueue() {
+	while (downloadsInProgress < maxDownloadsAtATime && downloadQueue.length > 0) {
+		let di = downloadQueue.shift();
+		downloadFile(di.link, di.file);
+	}
+}
+
+function addToDownloadQueue(link, file) {
+	let di = new DownloadInfo();
+	di.link = link;
+	di.file = file;
+	downloadQueue.push(di);
+}
+
+function downloadFile(link, file) {
+	downloadsInProgress++;
+	getHttp(link).then((data) => {
+		downloadsInProgress--;
+		fs.writeFile(file, data, (err) => {
+			if (err) console.log("ERROR: "+err);
+		});
+	}).catch( function (err) {
+		if (!hideDownloadErrors) console.log(err);
+		if (!hideDownloadErrors) console.log("ERROR while downloading "+link);
+		let waitSeconds = getRandomInt(7) + 7;
+		if (!hideDownloadErrors) console.log("Trying again in "+waitSeconds+" seconds ...");
+		if (!hideDownloadErrors) console.log(" ");
+		setTimeout( () => {
+			downloadsInProgress--;
+			downloadFile(link, file);
+		}, waitSeconds*1000);
+	});
+}
+
+async function keepDownloading(link) {
+	let success = false;
+	let data;
+	while (!success) {
+		try {
+			data = await getHttpSilent(link);
+			success = true;
+		} catch(err) {
+			console.log("ERROR while downloading "+link);
+			console.log(err);
+			let waitSeconds = getRandomInt(7) + 7;
+			console.log("Trying again in "+waitSeconds+" seconds ...");
+			await sleep(waitSeconds*1000);
+		}
+	}
+	return data;
+}
+
+// -------------------------------------------------------------------
+
 const rootLink = "http://publicdata.onehouronelife.com/publicLifeLogData/";
 const rootFolder = "oholData";
 
@@ -157,11 +230,13 @@ async function main() {
    		fs.mkdirSync(rootFolder);
 	}
 
+	intervDownloadQueue = setInterval( loopDownloadQueue, 2000 );
+
 	let intervUpdateLog = setInterval(() => {
 		if (lastLogFilesDownloaded === filesDownloaded) return;
 		lastLogFilesDownloaded = filesDownloaded;
-		let percentProgress = (filesDownloaded/(filesDownloaded+downloadsInProgress)*100).toFixed(2)+" %";
-		console.log(getTimeStr()+" - "+filesDownloaded+" files downloaded "+bytesReadable(bytesDownloaded)+", "+downloadsInProgress+" missing - status: "+percentProgress);
+		let percentProgress = (filesDownloaded/(filesDownloaded+downloadsInProgress+downloadQueue.length)*100).toFixed(2)+" %";
+		console.log(getTimeStr()+" - "+filesDownloaded+" files downloaded "+bytesReadable(bytesDownloaded)+", "+(downloadsInProgress+downloadQueue.length)+" missing - status: "+percentProgress);
 		if (downloadsInProgress <= 0) {
 			if (keepUpdating) {
 				lastLogFilesDownloaded = -1;
@@ -169,6 +244,7 @@ async function main() {
 				bytesDownloaded = 0;
 				if (forceUpdateMode && updatesHappend > 0) {
 					clearInterval(intervUpdateLog);
+					clearInterval(intervDownloadQueue);
 					console.log("Download complete!");
 					return;
 				}
@@ -177,11 +253,13 @@ async function main() {
 				updatesHappend++;
 				if (!keepUpdating) {
 					clearInterval(intervUpdateLog);
+					clearInterval(intervDownloadQueue);
 					console.log("Download complete!");
 				}
 				return;
 			}
 			clearInterval(intervUpdateLog);
+			clearInterval(intervDownloadQueue);
 			console.log("Download complete!");
 		}
 	}, 5000);
@@ -237,64 +315,21 @@ function downloadServerData(server, serverFolder) {
 	for (let d in allLinks[server].dateLinks) {
 		let file = serverFolder+fileSeperator+d;
 		fs.exists(file, (exists) => {
-			if (!exists) downloadFile(allLinks[server].dateLinks[d], file);
+			if (!exists) addToDownloadQueue(allLinks[server].dateLinks[d], file);
 		});
 	}
 	for (let d in allLinks[server].nameLinks) {
 		let file = serverFolder+fileSeperator+d+"_names";
 		fs.exists(file, (exists) => {
-			if (!exists) downloadFile(allLinks[server].nameLinks[d], file);
+			if (!exists) addToDownloadQueue(allLinks[server].nameLinks[d], file);
 		});
 	}
 	for (let d in allLinks[server].curseLinks) {
 		let file = serverFolder+fileSeperator+d+"_curses";
 		fs.exists(file, (exists) => {
-			if (!exists) downloadFile(allLinks[server].curseLinks[d], file);
+			if (!exists) addToDownloadQueue(allLinks[server].curseLinks[d], file);
 		});
 	}
-}
-
-function getRandomInt(max) {
-  return Math.floor(Math.random() * Math.floor(max));
-}
-
-function downloadFile(link, file) {
-	getHttp(link).then((data) => {
-		fs.writeFile(file, data, (err) => {
-			if (err) console.log("ERROR: "+err);
-		});
-	}).catch( function (err) {
-		if (!hideDownloadErrors) console.log(err);
-		if (!hideDownloadErrors) console.log("ERROR while downloading "+link);
-		let waitSeconds = getRandomInt(7) + 7;
-		if (!hideDownloadErrors) console.log("Trying again in "+waitSeconds+" seconds ...");
-		if (!hideDownloadErrors) console.log(" ");
-		setTimeout( () => { downloadFile(link, file) }, waitSeconds*1000);
-	});
-}
-
-async function sleep(millis) {
-	return new Promise( resolve => {
-		setTimeout(resolve, millis);
-	});
-}
-
-async function keepDownloading(link) {
-	let success = false;
-	let data;
-	while (!success) {
-		try {
-			data = await getHttpSilent(link);
-			success = true;
-		} catch(err) {
-			console.log("ERROR while downloading "+link);
-			console.log(err);
-			let waitSeconds = getRandomInt(7) + 7;
-			console.log("Trying again in "+waitSeconds+" seconds ...");
-			await sleep(waitSeconds*1000);
-		}
-	}
-	return data;
 }
 
 async function getAllLinks() {
@@ -393,7 +428,7 @@ async function updateAllFiles() {
 					updateComplete = false;
 					if (diff > 0) console.log("updating: "+server+" "+d+" -> missing "+bytesReadable(diff));
 					else console.log("updating: "+server+" "+d+" -> too much "+bytesReadable(diff*-1));
-					downloadFile(allLinks[server].nameLinks[d], filePath);
+					addToDownloadQueue(allLinks[server].nameLinks[d], filePath);
 				}
 			} else if (file.indexOf("curse") > -1) {
 				if (!allLinks[server].curseLinksSize[file]) return;
@@ -402,7 +437,7 @@ async function updateAllFiles() {
 					updateComplete = false;
 					if (diff > 0) console.log("updating: "+server+" "+file+" -> missing "+bytesReadable(diff));
 					else console.log("updating: "+server+" "+file+" -> too much "+bytesReadable(diff*-1));
-					downloadFile(allLinks[server].curseLinks[file], filePath);
+					addToDownloadQueue(allLinks[server].curseLinks[file], filePath);
 				}
 			} else {
 				if (!allLinks[server].dateLinksSize[file]) return;
@@ -411,7 +446,7 @@ async function updateAllFiles() {
 					updateComplete = false;
 					if (diff > 0) console.log("updating: "+server+" "+file+" -> missing "+bytesReadable(diff));
 					else console.log("updating: "+server+" "+file+" -> too much "+bytesReadable(diff*-1));
-					downloadFile(allLinks[server].dateLinks[file], filePath);
+					addToDownloadQueue(allLinks[server].dateLinks[file], filePath);
 				}
 			}
 		});
