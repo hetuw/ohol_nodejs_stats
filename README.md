@@ -16,13 +16,13 @@ This script might get stuck towards the end, if this happens, close it with CTRL
 
 ### oholplayersearch.js
 This script can be used to find out a players salted email hash.
-This hash will be used by oholgetplayerstats.js and can be used to get stats about a player.
+This hash can be used by oholgetplayerstats.js to get stats about a player.
 
 ### oholgetplayerstats.js
 This script uses salted email hashes to find out stats about players.
 
-### ohollineagefromemail.js
-This script can be used to get the lineage link from an email
-
 ### colorizestats.js
-Lets you colorize stats from oholgetplayerstats.js, so you can post colored stats on the forums
+Lets you colorize stats from oholgetplayerstats.js, so you can post colored stats on the forums.
+
+### oholcurseinfo.js
+Uses a player hash to find out the curse history of that player.
