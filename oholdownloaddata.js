@@ -122,7 +122,7 @@ async function getUserInput(question) {
 
 // -------------------------------------------------------------------
 
-const maxDownloadsAtATime = 100;
+const maxDownloadsAtATime = 10000;
 let downloadsInProgress = 0;
 let intervDownloadQueue = null;
 
