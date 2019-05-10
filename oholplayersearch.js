@@ -403,10 +403,13 @@ async function downloadAndProcessData() {
 		if (noDataAvailable) console.log("No data available for: "+strDate);
 		increaseDate(date_current);
 	}
-	for (var server in allLinks) { // process data if there are only 2 days
+	for (var server in allLinks) { // process remaining data
 		if (!tdd[server]) continue;
-		if (tdd[server].data.length < 3) {
+		if (!tdd[server].processed[1]) { // if there is only one input day and its the last day
 			processTDD(server, 1);
+		}
+		if (tdd[server].strDates[2] === getDateString(date_real_end)) { // if there are atleast 2 input days and one is the last day
+			processTDD(server, 2);
 		}
 	}
 }
@@ -417,6 +420,7 @@ function ThreeDayData() {
 	this.strDates = [];
 	this.data = [];
 	this.names = [];
+	this.processed = [];
 }
 
 async function processDataFromServer(strServer, strDate) {
@@ -435,12 +439,14 @@ async function processDataFromServer(strServer, strDate) {
 	tdd[strServer].strDates.push(strDate);
 	tdd[strServer].data.push(linesData);
 	tdd[strServer].names.push(linesNames);
+	tdd[strServer].processed.push(false);
 
 	if (tdd[strServer].data.length >= 3) {
 		if (tdd[strServer].data.length === 4) {
 			tdd[strServer].strDates.shift(); // shift removes the first element and shifts other elements back
 			tdd[strServer].data.shift();
 			tdd[strServer].names.shift();
+			tdd[strServer].processed.shift();
 		}
 		processTDD(strServer, 0);
 	} 
@@ -466,9 +472,12 @@ function ResultInfo() {
 }
 
 function processTDD(strServer, mode) {
+	let index = 1;
+	if (mode === 2) index = 2;
 	let t = tdd[strServer];
-	for (var l in t.names[1]) {
-		let line = t.names[1][l].split(' ');
+	t.processed[index] = true;
+	for (var l in t.names[index]) {
+		let line = t.names[index][l].split(' ');
 		let name = "";
 		let nameFound = false;
 		for (var i = 1; i < line.length; i++) {
@@ -493,6 +502,11 @@ function processTDD(strServer, mode) {
 	if (mode === 1) {
 		checkLines(t.data[0], strServer);
 		checkLines(t.data[1], strServer);
+		return;
+	}
+	if (mode === 2) {
+		checkLines(t.data[1], strServer);
+		checkLines(t.data[2], strServer);
 		return;
 	}
 	checkLines(t.data[0], strServer);
