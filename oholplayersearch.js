@@ -403,6 +403,12 @@ async function downloadAndProcessData() {
 		if (noDataAvailable) console.log("No data available for: "+strDate);
 		increaseDate(date_current);
 	}
+	for (var server in allLinks) { // process data if there are only 2 days
+		if (!tdd[server]) continue;
+		if (tdd[server].data.length < 3) {
+			processTDD(server, 1);
+		}
+	}
 }
 
 var tdd = []; // array containing ThreeDayData - indices are server names like 'server8'
@@ -436,8 +442,8 @@ async function processDataFromServer(strServer, strDate) {
 			tdd[strServer].data.shift();
 			tdd[strServer].names.shift();
 		}
-		processTDD(strServer);
-	}
+		processTDD(strServer, 0);
+	} 
 }
 
 var results = []; // array containing ResultInfo() 
@@ -457,7 +463,7 @@ function ResultInfo() {
 	this.deathUnixTime = 0;
 }
 
-function processTDD(strServer) {
+function processTDD(strServer, mode) {
 	let t = tdd[strServer];
 	for (var l in t.names[1]) {
 		let line = t.names[1][l].split(' ');
@@ -482,6 +488,11 @@ function processTDD(strServer) {
 		}
 	}
 	if (results.length < 1) return;
+	if (mode === 1) {
+		checkLines(t.data[0], strServer);
+		checkLines(t.data[1], strServer);
+		return;
+	}
 	checkLines(t.data[0], strServer);
 	checkLines(t.data[1], strServer);
 	checkLines(t.data[2], strServer);
