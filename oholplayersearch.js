@@ -151,7 +151,6 @@ async function getPlayerInfo() {
 
 	await getBeginEndDates();
 
-	console.log(" ");
 	let strOutputToFile = await getUserInput('Do you want to save the results to a file? (y/n): ');
 	if (strOutputToFile === 'Y' || strOutputToFile === 'y') outputResultsToFile = true;
 	if (outputResultsToFile) {
