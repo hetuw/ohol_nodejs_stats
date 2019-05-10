@@ -461,6 +461,8 @@ function ResultInfo() {
 	this.deathReason = "unknown";
 	this.birthUnixTime = 0;
 	this.deathUnixTime = 0;
+	this.birthCords = "unknown";
+	this.deathCords = "unknown";
 }
 
 function processTDD(strServer, mode) {
@@ -519,11 +521,13 @@ function checkLines(lines, strServer) {
 					results[r].birthUnixTime = line[1];
 					results[r].gender = line[4];
 					results[r].generation = parseInt(line[8].match(/[0-9]+/));
+					results[r].birthCords = line[5];
 				} else if (line[0] === 'D') {
 					results[r].deathUnixTime = line[1];
 					results[r].deathAge = parseFloat(line[4].match(/[0-9\.]+/));
 					results[r].gender = line[5];
 					results[r].deathReason = line[7];
+					results[r].deathCords = line[6];
 				}
 				continue;
 			}
@@ -611,6 +615,9 @@ function logSearchResults() {
 		else logResults("birth time is unknown");
 		if (results[r].deathUnixTime > 0) logResults("death: "+getDateStringFromUnixTime(results[r].deathUnixTime));
 		else logResults("death time is unknown");
+		logResults("--------------------------------------------------");
+		logResults("birthCords: "+results[r].birthCords);
+		logResults("deathCords: "+results[r].deathCords);
 		logResults("--------------------------------------------------");
 		logResults("name: "+results[r].pName);
 		logResults("hash: "+results[r].hash);
