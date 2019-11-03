@@ -4,6 +4,7 @@
 const ignoreDisconnects = false; // set this to true to ignore disconnects
 const ignoreDeathsUnderAge = 3; // disable it by setting it to 0
 const countDeathsAsOldAgeOverAge = 54; // disable it by setting it to 60 or higher
+const logAllData = true; // when false will only log the most interesting data
 
 const rootLink = "http://publicdata.onehouronelife.com/publicLifeLogData/";
 const rootFolder = "oholData";
@@ -855,14 +856,14 @@ function logPlayerData() {
 		if (players[hash].lastEntry < 1) logResults("lastEntry: unknown");
 		else logResults("lastEntry: "+getDateStringFromUnixTime(players[hash].lastEntry));
 		logResults("------------------------------------------");
-		logResults("births: "+players[hash].births);
+		if (logAllData) logResults("births: "+players[hash].births);
 		let ignoredDeaths = players[hash].ignoredUnderAgeDeaths+players[hash].ignoredEveDeaths+players[hash].ignoredDisconnects;
 		let allDeaths = players[hash].deaths+ignoredDeaths;
-		logResults("deaths: "+allDeaths);
+		if (logAllData) logResults("deaths: "+allDeaths);
 		logResults("timeAlive: "+minutesToTimeStr(players[hash].minutesAlive));
-		logResults("males: "+players[hash].males);
-		logResults("females: "+players[hash].females);
-		logResults("males/females: "+(players[hash].males/players[hash].females).toFixed(2));
+		if (logAllData) logResults("males: "+players[hash].males);
+		if (logAllData) logResults("females: "+players[hash].females);
+		if (logAllData) logResults("males/females: "+(players[hash].males/players[hash].females).toFixed(2));
 		logResults("------------------------------------------");
 		let allowedMinutesLive = players[hash].minutesAlive-players[hash].minutesAliveIgnored;
 		let allowedEveDeaths = players[hash].eves-players[hash].ignoredEveDeaths;
@@ -872,24 +873,26 @@ function logPlayerData() {
 		for (var i in players[hash].deathReasons) {
 			logResults("Death by "+i+": "+players[hash].deathReasons[i]+" -> "+(players[hash].deathReasons[i]/players[hash].deaths*100).toFixed(2)+"%");
 		}
+		if (logAllData) {
+			logResults("------------------------------------------");
+			if (ignoredDeaths > 0) logResults("ignoredDeaths: "+ignoredDeaths+" -> "+(ignoredDeaths/allDeaths*100).toFixed(2)+"%");
+			logResults("timeAliveIgnored: "+minutesToTimeStr(players[hash].minutesAliveIgnored));
+			if (players[hash].ignoredUnderAgeDeaths > 0) logResults("ignoredUnderAgeDeaths: "+players[hash].ignoredUnderAgeDeaths);
+			if (players[hash].ignoredEveDeaths > 0) logResults("ignoredEveDeaths: "+players[hash].ignoredEveDeaths);
+			if (players[hash].ignoredDisconnects > 0) logResults("ignoredDisconnects: "+players[hash].ignoredDisconnects);
+			//logResults("elderDeaths: "+players[hash].elderDeaths);
+			logResults("------------------------------------------");
+			logResults("born as eve: "+players[hash].eves+" -> "+(players[hash].eves/players[hash].births*100).toFixed(2)+"%");
+			logResults("avg. generation born into: "+(players[hash].eveChains/players[hash].births).toFixed(2));
+			logResults("longest generation born into: "+players[hash].longestEveChain);
+		}
 		logResults("------------------------------------------");
-		if (ignoredDeaths > 0) logResults("ignoredDeaths: "+ignoredDeaths+" -> "+(ignoredDeaths/allDeaths*100).toFixed(2)+"%");
-		logResults("timeAliveIgnored: "+minutesToTimeStr(players[hash].minutesAliveIgnored));
-		if (players[hash].ignoredUnderAgeDeaths > 0) logResults("ignoredUnderAgeDeaths: "+players[hash].ignoredUnderAgeDeaths);
-		if (players[hash].ignoredEveDeaths > 0) logResults("ignoredEveDeaths: "+players[hash].ignoredEveDeaths);
-		if (players[hash].ignoredDisconnects > 0) logResults("ignoredDisconnects: "+players[hash].ignoredDisconnects);
-		//logResults("elderDeaths: "+players[hash].elderDeaths);
-		logResults("------------------------------------------");
-		logResults("born as eve: "+players[hash].eves+" -> "+(players[hash].eves/players[hash].births*100).toFixed(2)+"%");
-		logResults("avg. generation born into: "+(players[hash].eveChains/players[hash].births).toFixed(2));
-		logResults("longest generation born into: "+players[hash].longestEveChain);
-		logResults("------------------------------------------");
-		logResults("kids: "+players[hash].kids);
+		if (logAllData) logResults("kids: "+players[hash].kids);
 		if (players[hash].kids > 0 && players[hash].females > 0) {
 			logResults("kids per female life: "+(players[hash].kids/players[hash].femaleDeaths).toFixed(2));	
 			logResults("avg. kid lifespan: "+players[hash].avgKidAge);
-			logResults("grandkids: "+players[hash].grandKids);
-			logResults("grandkids per female life: "+(players[hash].grandKids/players[hash].femaleDeaths).toFixed(2));
+			if (logAllData) logResults("grandkids: "+players[hash].grandKids);
+			if (logAllData) logResults("grandkids per female life: "+(players[hash].grandKids/players[hash].femaleDeaths).toFixed(2));
 		}
 		logResults("------------------------------------------");
 		logResults("kills: "+players[hash].kills+" -> "+(players[hash].kills/players[hash].deaths*100).toFixed(2)+"%");
