@@ -827,6 +827,10 @@ function processTertiaryDataLine(strServer, line) {
 	}
 }
 
+function getHoursFromMinutes(minutes) {
+	return Math.round(minutes/60*100)/100;
+}
+
 function logResults(str) {
 	if (outputResultsToFile) {
 		fs.appendFileSync(resultFile, str+"\n");		
@@ -860,7 +864,7 @@ function logPlayerData() {
 		let ignoredDeaths = players[hash].ignoredUnderAgeDeaths+players[hash].ignoredEveDeaths+players[hash].ignoredDisconnects;
 		let allDeaths = players[hash].deaths+ignoredDeaths;
 		if (logAllData) logResults("deaths: "+allDeaths);
-		logResults("timeAlive: "+minutesToTimeStr(players[hash].minutesAlive));
+		logResults("timeAlive: "+getHoursFromMinutes(players[hash].minutesAlive)+"h");
 		if (logAllData) logResults("males: "+players[hash].males);
 		if (logAllData) logResults("females: "+players[hash].females);
 		if (logAllData) logResults("males/females: "+(players[hash].males/players[hash].females).toFixed(2));
@@ -876,7 +880,7 @@ function logPlayerData() {
 		if (logAllData) {
 			logResults("------------------------------------------");
 			if (ignoredDeaths > 0) logResults("ignoredDeaths: "+ignoredDeaths+" -> "+(ignoredDeaths/allDeaths*100).toFixed(2)+"%");
-			logResults("timeAliveIgnored: "+minutesToTimeStr(players[hash].minutesAliveIgnored));
+			logResults("timeAliveIgnored: "+getHoursFromMinutes(players[hash].minutesAliveIgnored)+"h");
 			if (players[hash].ignoredUnderAgeDeaths > 0) logResults("ignoredUnderAgeDeaths: "+players[hash].ignoredUnderAgeDeaths);
 			if (players[hash].ignoredEveDeaths > 0) logResults("ignoredEveDeaths: "+players[hash].ignoredEveDeaths);
 			if (players[hash].ignoredDisconnects > 0) logResults("ignoredDisconnects: "+players[hash].ignoredDisconnects);
