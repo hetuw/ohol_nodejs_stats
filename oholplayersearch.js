@@ -129,7 +129,20 @@ function Links() {
 
 main();
 async function main() {
-	await getPlayerInfo();	
+	var args = process.argv.slice(0);
+	if (!args[2] || args[2].length < 0) {
+		await getPlayerInfo();
+	} else {
+		if (args[3]) {
+			console.log(" ");
+			console.log("Error: too many arguments");
+			console.log("call the script like this: nodejs "+args[1]+" \"lineagelink\"");
+			console.log("replace lineagelink with a real lineage link and be sure to put it inside \"\"");
+			return;
+		}
+		await getPlayerInfoFromLineageLink(args[2]);
+	}
+	await askSaveToFile();	
 
 	if (fs.existsSync(rootFolder)) {
 		localDataAvailable = true;
@@ -145,12 +158,7 @@ async function main() {
 	logSearchResults();
 }
 
-async function getPlayerInfo() {
-	console.log("Start searching for players... ");
-	console.log(" ");
-
-	await getBeginEndDates();
-
+async function askSaveToFile() {
 	let strOutputToFile = await getUserInput('Do you want to save the results to a file? (y/n): ');
 	if (strOutputToFile === 'Y' || strOutputToFile === 'y') outputResultsToFile = true;
 	if (outputResultsToFile) {
@@ -166,8 +174,85 @@ async function getPlayerInfo() {
 			}
 		}
 	}
-
 	console.log(" ");
+}
+
+function getBeginEndDatesFromTimeAgo(timeAgo) {
+	let number = parseInt(timeAgo.match(/[0-9]*/)[0]);
+	let timeUnit = timeAgo.match(/[0-9]* ([A-z]*)/)[1];
+	timeUnit = timeUnit.toLowerCase();
+
+	//let today = new Date();
+	let startDate = new Date();
+	let endDate = new Date();
+	if (timeUnit.includes("second")) {
+		startDate.setDate(startDate.getDate()-1);
+	} else if (timeUnit.includes("hour")) {
+		startDate.setDate(startDate.getDate()-2);
+	} else if (timeUnit.includes("day")) {
+		startDate.setDate(startDate.getDate()-number-1);
+		endDate.setDate(endDate.getDate()-number+1);
+	} else if (timeUnit.includes("month")) {
+		startDate.setDate(startDate.getDate()-(number*31)-31);
+		endDate.setDate(endDate.getDate()-(number*31)+31);
+	} else {
+		console.log("Error: unknown time unit: "+timeUnit);
+		process.exit();
+	}
+	jsDateToDate(startDate, date_begin);
+	jsDateToDate(endDate, date_end);
+	for (var i = 0; i < 3; i++) {
+		date_real_begin[i] = date_begin[i];
+	}
+	for (var i = 0; i < 3; i++) {
+		date_real_end[i] = date_end[i];
+	}
+}
+
+async function getPlayerInfoFromLineageLink(link) {
+	console.log(" ");
+	let regex = /\&id\=([0-9]*)/;
+	let result = link.match(regex);
+	if (!result || !result[1]) {
+		console.log("Error: cannot find player id");
+		console.log("Error: invalid lineage link");
+		process.exit();
+	}
+	let strId = result[1];
+	link = link.replace(/\&rel_id\=[0-9]*/, "") // remove relation id so we dont get relation info that would confuse the regex filters
+	console.log("player id: "+strId);
+	console.log(" ");
+	console.log("Downloading lineage link: "+link);
+	let website = await keepDownloading(link);
+	website = website.replace(/(\r\n|\n|\r)/gm, "");
+	console.log(" ");
+	console.log("download complete");
+	regex = "character\_page\&id\="+strId+".*?\<\/a\>\<\/a\>\<br\>(.*?)\<\/td\>";
+	result = website.match(regex);
+	console.log(" ");
+	if (!result || !result[1]) {
+		console.log("Error: cannot find player info from lineage link");
+		process.exit();
+	}
+	result = result[1];
+	console.log(result);
+	console.log(" ");
+	pInfo.server = null;
+	pInfo.pName = result.match(/([A-z ]*?)\<br/)[1].toUpperCase();
+	pInfo.deathAge = parseInt(result.match(/\<br\>([0-9]*)/)[1]);
+	let timeAgo = result.match(/\<br\>.*?\<br\>([0-9A-z ]*)/)[1];
+	console.log("time ago: "+timeAgo);
+	console.log(" ");
+	getBeginEndDatesFromTimeAgo(timeAgo);
+	logPInfo();
+}
+
+async function getPlayerInfo() {
+	console.log("Start searching for players... ");
+	console.log(" ");
+
+	await getBeginEndDates();
+
 	console.log("Input server to search on, e.g. 'server1' or 'bigserver2' or 'u' for unknown");
 	let server = await getUserInput("server: ");
 	server = server.toLowerCase();
@@ -241,8 +326,8 @@ async function getDateFromUser(question) {
 
 function logPInfo() {
 	console.log("==================================================");
-	if (pInfo.server) console.log(getDateString(date_real_begin)+" - "+getDateString(date_end)+"     server: "+pInfo.server);
-	else console.log(getDateString(date_real_begin)+" - "+getDateString(date_end)+"     server: unknown");
+	if (pInfo.server) console.log(getDateString(date_begin)+" - "+getDateString(date_end)+"     server: "+pInfo.server);
+	else console.log(getDateString(date_begin)+" - "+getDateString(date_end)+"     server: unknown");
 	console.log("--------------------------------------------------");
 	if (pInfo.pName) console.log("name: "+pInfo.pName);
 	else console.log("name: unknown");
