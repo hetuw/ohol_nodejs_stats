@@ -1,7 +1,7 @@
 # ohol_nodejs_stats
 
 This repository contains different scripts related to a game called OneHourOneLife https://github.com/jasonrohrer/OneLife 
-These scripts can be used to process ohol data from: http://onehouronelife.com/publicLifeLogData/
+These scripts can be used to process ohol data from: http://publicdata.onehouronelife.com/
 The data is described here: https://onehouronelife.com/forums/viewtopic.php?id=2529
 
 You will need nodejs to execute the scripts
