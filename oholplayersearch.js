@@ -227,7 +227,7 @@ async function getPlayerInfoFromLineageLink(link) {
 	website = website.replace(/(\r\n|\n|\r)/gm, "");
 	console.log(" ");
 	console.log("download complete");
-	regex = "character\_page\&id\="+strId+".*?\<\/a\>\<\/a\>\<br\>(.*?)\<\/td\>";
+	regex = "character\_page\&id\="+strId+"&rel_id\="+strId+".\>\<img.*?\<\/a\>\<\/a\>\<br\>(.*?)\<\/td\>";
 	result = website.match(regex);
 	console.log(" ");
 	if (!result || !result[1]) {
@@ -240,7 +240,7 @@ async function getPlayerInfoFromLineageLink(link) {
 	pInfo.server = null;
 	pInfo.pName = result.match(/([A-z ]*?)\<br/)[1].toUpperCase();
 	pInfo.deathAge = parseInt(result.match(/\<br\>([0-9]*)/)[1]);
-	let timeAgo = result.match(/\<br\>.*?\<br\>([0-9A-z ]*)/)[1];
+	let timeAgo = result.match(/\<br\>.*?\<br\>([0-9A-z ]* ago)/)[1];
 	console.log("time ago: "+timeAgo);
 	console.log(" ");
 	getBeginEndDatesFromTimeAgo(timeAgo);
