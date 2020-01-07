@@ -1,7 +1,7 @@
 # ohol_nodejs_stats
 
 This repository contains different scripts related to a game called OneHourOneLife https://github.com/jasonrohrer/OneLife 
-These scripts can be used to process ohol data from: http://onehouronelife.com/publicLifeLogData/
+These scripts can be used to process ohol data from: http://publicdata.onehouronelife.com/
 The data is described here: https://onehouronelife.com/forums/viewtopic.php?id=2529
 
 You will need nodejs to execute the scripts
@@ -17,12 +17,15 @@ This script might get stuck towards the end, if this happens, close it with CTRL
 ### oholplayersearch.js
 This script can be used to find out a players salted email hash.
 This hash can be used by oholgetplayerstats.js to get stats about a player.
+You can execute it without arguments, or pass a lineage link to it and it will find the player information from the link.
 
 ### oholgetplayerstats.js
 This script uses salted email hashes to find out stats about players.
+Use oholplayersearch.js to find out the hash from a player.
 
 ### colorizestats.js
 Lets you colorize stats from oholgetplayerstats.js, so you can post colored stats on the forums.
 
 ### oholcurseinfo.js
 Uses a player hash to find out the curse history of that player.
+The curse logs might be bugged and not contain all curses.
