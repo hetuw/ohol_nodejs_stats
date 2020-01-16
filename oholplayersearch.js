@@ -186,7 +186,9 @@ function getBeginEndDatesFromTimeAgo(timeAgo) {
 	let startDate = new Date();
 	let endDate = new Date();
 	if (timeUnit.includes("second")) {
-		startDate.setDate(startDate.getDate()-1);
+		startDate.setDate(startDate.getDate()-2);
+	} else if (timeUnit.includes("minute")) {
+		startDate.setDate(startDate.getDate()-2);
 	} else if (timeUnit.includes("hour")) {
 		startDate.setDate(startDate.getDate()-2);
 	} else if (timeUnit.includes("day")) {
