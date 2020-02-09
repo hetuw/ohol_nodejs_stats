@@ -109,6 +109,7 @@ var date_real_end = [];
 
 let outputResultsToFile = false;
 let resultFile = "";
+let	usingLineageLink = false;
 
 var pInfo = new PlayerInfo();
 
@@ -142,7 +143,7 @@ async function main() {
 		}
 		await getPlayerInfoFromLineageLink(args[2]);
 	}
-	await askSaveToFile();	
+	if (!usingLineageLink) await askSaveToFile();	
 
 	if (fs.existsSync(rootFolder)) {
 		localDataAvailable = true;
@@ -212,6 +213,7 @@ function getBeginEndDatesFromTimeAgo(timeAgo) {
 }
 
 async function getPlayerInfoFromLineageLink(link) {
+	usingLineageLink = true;
 	console.log(" ");
 	let regex = /\&id\=([0-9]*)/;
 	let result = link.match(regex);
