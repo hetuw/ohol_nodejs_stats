@@ -141,10 +141,60 @@ async function main() {
 			console.log("replace lineagelink with a real lineage link and be sure to put it inside \"\"");
 			return;
 		}
-		await getPlayerInfoFromLineageLink(args[2]);
+		if (fs.existsSync(args[2])) {
+			await processLineageLinkFile(args[2]);
+			return;
+		} else await getPlayerInfoFromLineageLink(args[2]);
 	}
 	if (!usingLineageLink) await askSaveToFile();	
 
+	await loadAllLinks();
+
+	await downloadAndProcessData();
+	logSearchResults();
+}
+
+// returns array with objects, each obj has properties "link" and "desc"
+async function getLineageListFromFile(file) {
+	let lineageLinkList = [];
+	let fileData = fs.readFileSync(file, 'utf8');
+	let lines = fileData.split('\n');
+	for (let l in lines) {
+		let words = lines[l].split(' ');
+		let lineageInfo = {};
+		if (words[0].length < 1) continue;
+		lineageInfo.link = words[0];
+		lineageInfo.desc = "";
+		for (let w in words) {
+			if (w == 0) continue; // dont make this === or it will not work
+			lineageInfo.desc += words[w] + " ";
+		}
+		lineageLinkList.push(lineageInfo);
+	}
+	return lineageLinkList;
+}
+
+async function processLineageLinkFile(file) {
+	let lineageLinkList = await getLineageListFromFile(file);
+	console.log(lineageLinkList);
+
+	await loadAllLinks();
+	let strResult = "";
+	for (let i in lineageLinkList) {
+		await getPlayerInfoFromLineageLink(lineageLinkList[i].link);
+		await downloadAndProcessData();
+		strResult += "--------------------------------------------------"+"\n";
+		strResult += "link: "+lineageLinkList[i].link+"\n";
+		strResult += "desc: "+lineageLinkList[i].desc+"\n";
+		for (let r in results) {
+			strResult += "hash: "+results[r].hash+"\n";
+		}
+	}
+	strResult += "--------------------------------------------------"+"\n";
+	logResults(strResult);
+}
+
+async function loadAllLinks() {
 	if (fs.existsSync(rootFolder)) {
 		localDataAvailable = true;
 	}
@@ -154,9 +204,6 @@ async function main() {
 	} else {
 		await getAllLinks();
 	}
-
-	await downloadAndProcessData();
-	logSearchResults();
 }
 
 async function askSaveToFile() {
@@ -213,6 +260,7 @@ function getBeginEndDatesFromTimeAgo(timeAgo) {
 }
 
 async function getPlayerInfoFromLineageLink(link) {
+	pInfo = new PlayerInfo();
 	usingLineageLink = true;
 	console.log(" ");
 	let regex = /\&id\=([0-9]*)/;
@@ -452,6 +500,7 @@ async function getAllFileLinks() {
 				allLinks[server].nameLinks[file.replace("_names", "")] = dir + fileSeperator + file;
 				return;
 			}
+			if (file.indexOf("curses") > -1) return;
 			allLinks[server].dateLinks[file] = dir + fileSeperator + file;
 		});
 	}
@@ -473,6 +522,9 @@ async function getFileData(strServer, strDate, type) {
 
 
 async function downloadAndProcessData() {
+	tdd = [];
+	results = [];
+
 	decreaseDate(date_begin);
 	increaseDate(date_end);
 	for (var i = 0; i < 3; i++) {
@@ -500,6 +552,14 @@ async function downloadAndProcessData() {
 			processTDD(server, 2);
 		}
 	}
+
+	let resultsCopy = [];
+	for (var r in results) {
+		if (pInfo.gender && pInfo.gender !== results[r].gender) continue;
+		if (pInfo.deathAge && pInfo.deathAge !== parseInt(results[r].deathAge)) continue;
+		resultsCopy.push(results[r]);
+	}
+	results = resultsCopy;
 }
 
 var tdd = []; // array containing ThreeDayData - indices are server names like 'server8'
@@ -709,8 +769,6 @@ function logSearchResults() {
 	if (resultCount === 1) logResults(resultCount+" player found:\n");
 	else logResults(resultCount+" players found:\n");
 	for (var r in results) {
-		if (pInfo.gender && pInfo.gender !== results[r].gender) continue;
-		if (pInfo.deathAge && pInfo.deathAge !== parseInt(results[r].deathAge)) continue;
 		logResults("==================================================");
 		logResults("server: "+results[r].server);
 		if (results[r].birthUnixTime > 0) logResults("birth: "+getDateStringFromUnixTime(results[r].birthUnixTime));
