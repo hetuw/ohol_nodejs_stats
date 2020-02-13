@@ -179,6 +179,7 @@ async function processLineageLinkFile(file) {
 	console.log(lineageLinkList);
 
 	await loadAllLinks();
+	let strResultShort = "";
 	let strResult = "";
 	for (let i in lineageLinkList) {
 		await getPlayerInfoFromLineageLink(lineageLinkList[i].link);
@@ -188,9 +189,14 @@ async function processLineageLinkFile(file) {
 		strResult += "desc: "+lineageLinkList[i].desc+"\n";
 		for (let r in results) {
 			strResult += "hash: "+results[r].hash+"\n";
+			strResultShort += results[r].hash+" ";
 		}
+		strResultShort += lineageLinkList[i].desc+"\n";
 	}
 	strResult += "--------------------------------------------------"+"\n";
+	logResults("--------------------------------------------------"+"\n");
+	logResults(strResultShort);
+	logResults("--------------------------------------------------"+"\n");
 	logResults(strResult);
 }
 
